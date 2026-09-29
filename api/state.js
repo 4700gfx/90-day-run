@@ -4,9 +4,11 @@ function getRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (!url || !token) {
-    const seen = Object.keys(process.env).filter((k) => /redis|kv_/i.test(k));
+    const all = Object.keys(process.env)
+      .filter((k) => !/^(npm_|VERCEL_|CI$|PATH$|HOME$|LANG$|PWD$|SHLVL$|_$|NODE_)/i.test(k))
+      .sort();
     throw new Error(
-      `Redis env vars not found (checked UPSTASH_REDIS_REST_URL/TOKEN and KV_REST_API_URL/TOKEN). Env keys containing "redis" or "kv_": ${seen.join(", ") || "(none)"}`
+      `Redis env vars not found (checked UPSTASH_REDIS_REST_URL/TOKEN and KV_REST_API_URL/TOKEN). All other env keys present: ${all.join(", ") || "(none)"}`
     );
   }
   return new Redis({ url, token });
