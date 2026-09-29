@@ -1,0 +1,7 @@
+{
+  "name": "90-day-run",
+  "private": true,
+  "dependencies": {
+    "@upstash/redis": "latest"
+  }
+}
