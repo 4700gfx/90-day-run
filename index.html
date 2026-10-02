@@ -151,12 +151,12 @@ table.log th{color:var(--ink2);font-weight:600;border-top:none}
     <div id="tab-milestones" hidden></div>
     <div id="tab-insights" hidden></div>
   </section>
-  <p class="small" style="margin-top:14px">Rules: workout, daily spend and HYSA are strict. Meals, code, applications and reading each get one miss per week (Sun–Sat), never two days in a row. Spend is checked month-to-date against $350 × (day ÷ days in month).</p>
+  <p class="small" style="margin-top:14px">Rules: workout, daily spend and HYSA are strict. Meals, code, applications and reading each get one miss per week (Sun–Sat), never two days in a row. Spend is checked month-to-date against $20/day.</p>
 </div>
 
 <script>
 (function(){
-const START = new Date(2026,8,27), DAYS = 90, POOL = 350, HYSA_TARGET = 1780, APP_TARGET = 900;
+const START = new Date(2026,8,27), DAYS = 90, DAILY_SPEND = 20, HYSA_TARGET = 1780, APP_TARGET = 900;
 const WORKOUT = ["Walk + lift","Lift","Lift","Lift","Walk / run","Walk / run","Short workout"];
 const DOWN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const RECIPES = {1:["Chicken & Sweet Potato Bowl","Sweet Chili Shrimp"],2:["Salmon & Salad","Shrimp & Lamb Alfredo"],3:["Herb-Crusted Steak","Air Fried Wings"],4:["Blackened Shrimp Hash","Garlic Butter Lamb Chops"]};
@@ -238,8 +238,8 @@ function mtd(d){ // spend month-to-date through d
   return sum;
 }
 const isRunSept=d=>d.getFullYear()===2026&&d.getMonth()===8;
-function poolFor(d){return isRunSept(d)?POOL/30*4:POOL}
-function allowance(d){const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return isRunSept(d)?POOL/30*(d.getDate()-26):POOL*d.getDate()/dim;}
+function poolFor(d){const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return isRunSept(d)?DAILY_SPEND*4:DAILY_SPEND*dim}
+function allowance(d){return isRunSept(d)?DAILY_SPEND*(d.getDate()-26):DAILY_SPEND*d.getDate();}
 function spendOk(d){return mtd(d)<=allowance(d)+0.001}
 // grace evaluation: returns per-day {missed:[h], illegal:[h], legal:[h]}
 function graceEval(){
@@ -323,13 +323,13 @@ function render(){
   const hysa=S.hysa.reduce((a,b)=>a+(Number(b.amt)||0),0);
   document.getElementById("sWon").textContent=won;document.getElementById("sStreak").textContent=streak;
   document.getElementById("sApps").textContent=apps;document.getElementById("sHysa").textContent=money(hysa);
-  renderTabs(G,apps,hysa);
+  renderTabs(G,apps,hysa,streak);
 }
 function bookNow(){let n=S.chapters||0;for(const[b,c]of BOOKS){if(n<c)return `${b} · next: chapter ${n+1} of ${c}`;n-=c;}return "All three books finished";}
 function upd(fn){const k=key(addDays(START,sel));const x=S.days[k]||{};fn(x);S.days[k]=x;
   save();render();}
 
-function renderTabs(G,apps,hysa){
+function renderTabs(G,apps,hysa,streak){
   // money
   const d=addDays(START,sel);const m=mtd(d),a=allowance(d);
   const P=poolFor(d);const pct=Math.min(100,m/P*100);
@@ -367,7 +367,7 @@ function renderTabs(G,apps,hysa){
   document.getElementById("tab-milestones").innerHTML=`<ul class="list">${MILESTONES.map(([dt,t],i)=>{const done=!!S.milestones[i];const dd=parse(dt);return `<li class="${done?"done":""}"><button class="tick ${done?"on":""}" data-m="${i}">${done?"✓":""}</button><span class="d">${MON[dd.getMonth()]} ${dd.getDate()}</span><span class="t">${t}</span></li>`}).join("")}</ul>`;
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{S.milestones[b.dataset.m]=!S.milestones[b.dataset.m];save();render();});
 
-  renderInsights(G,apps);
+  renderInsights(G,apps,streak);
 }
 
 // ---------- charts ----------
@@ -407,14 +407,20 @@ function weeklyBars(G){
   }
   return rows;
 }
-function renderInsights(G,apps){
+function renderInsights(G,apps,curStreak){
   const todayIdx=dayIndex(new Date());
-  let won=0,lost=0,bestStreak=0,curRun=0,totalSpend=0,spendDays=0;
+  let won=0,lost=0,bestStreak=0,curRun=0,totalSpend=0,spendDays=0,overLimitDays=0;
+  const spendPoints=[];
   for(let i=0;i<DAYS;i++){
     const s=status(i,G);
     if(s==="won"){won++;curRun++;bestStreak=Math.max(bestStreak,curRun);}else{if(s==="lost")lost++;curRun=0;}
     const e=dayData(i);
-    if(e&&e.spend){totalSpend+=Number(e.spend)||0;spendDays++;}
+    if(e&&e.spend!=null&&e.spend!==""){
+      const sp=Number(e.spend)||0;
+      totalSpend+=sp;spendDays++;
+      if(sp>DAILY_SPEND)overLimitDays++;
+      spendPoints.push({y:sp,label:key(addDays(START,i))});
+    }
   }
   const decided=won+lost;
   const winRate=decided?Math.round(won/decided*100):0;
@@ -426,14 +432,19 @@ function renderInsights(G,apps){
   document.getElementById("tab-insights").innerHTML=`
    <div class="kv">
     <div><div class="v">${winRate}%</div><div class="l">win rate · ${won}/${decided||0} decided</div></div>
+    <div><div class="v">${curStreak}</div><div class="l">current streak</div></div>
     <div><div class="v">${bestStreak}</div><div class="l">best streak</div></div>
-    <div><div class="v">${money(avgSpend)}</div><div class="l">avg daily spend</div></div>
     <div><div class="v">${daysLeft}</div><div class="l">days left</div></div>
+   </div>
+   <div class="kv sec">
+    <div><div class="v">${money(avgSpend)}</div><div class="l">avg daily spend · $${DAILY_SPEND} limit</div></div>
+    <div><div class="v">${overLimitDays}</div><div class="l">days over the $${DAILY_SPEND} limit</div></div>
    </div>
    <div class="sec"><div class="row"><span>Applications pace</span><span class="mono">${apps} so far · on pace for ~${Math.round(appsPace)} by day 90</span></div><div class="bar ${appsPace>=APP_TARGET?"ok":""}"><span style="width:${Math.min(100,appsPace/APP_TARGET*100)}%"></span></div></div>
    <div class="sec"><h2 style="font-size:15px">Weekly win rate</h2>${weeklyBars(G)}
     <div class="legend"><span><i style="background:var(--win)"></i>Won</span><span><i style="background:var(--loss)"></i>Lost</span><span><i style="background:var(--grace)"></i>In progress</span><span><i style="background:var(--empty)"></i>Not logged</span></div>
    </div>
+   <div class="sec"><h2 style="font-size:15px">Daily spend</h2>${lineChart(spendPoints,{band:[0,DAILY_SPEND],unit:""})}</div>
    <div class="sec"><h2 style="font-size:15px">Weight trend</h2>${lineChart(S.body.filter(b=>b.w!==""&&b.w!=null).map(b=>({y:Number(b.w),label:b.date})),{band:[160,165],unit:" lb"})}</div>
    <div class="sec"><h2 style="font-size:15px">Waist trend</h2>${lineChart(S.body.filter(b=>b.waist!==""&&b.waist!=null).map(b=>({y:Number(b.waist),label:b.date})),{unit:" in"})}</div>
    <div class="sec"><h2 style="font-size:15px">Needs closing</h2><div id="needsReview"></div></div>`;
