@@ -10,15 +10,15 @@ import { StreakMap } from "./StreakMap";
 import type { RunCtx } from "./useRun";
 
 const ORDER: HabitId[] = ["workout", "spend", "hysa", "meals", "commit", "apply", "read"];
-const KIND_LABEL = { money: "Money", book: "Book", checkin: "Check-in", school: "School", holiday: "Holiday" } as const;
+const KIND_LABEL = { money: "Money", book: "Book", checkin: "Check-in", school: "School", holiday: "Holiday", ossu: "OSSU project" } as const;
 
 export function Run({ ctx, openDay }: { ctx: RunCtx; openDay: (d: string) => void }) {
   const { ev, cfg, stats, run, profile, settings, activeRunId } = ctx;
   const dayNow = Math.min(Math.max(ev.todayNum, 0), cfg.lengthDays);
   const tokens = tokenSummary(ev, cfg);
   const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
-  const cards = scorecards(ev, { ...run, collectionsClearedBy: (d) => clearedBy(run.collections, d) }, cfg, profile);
-  const timeline = milestoneTimeline(cfg, profile, settings.book3);
+  const cards = scorecards(ev, { ...ctx.inputs, collectionsClearedBy: (d) => clearedBy(run.collections, d) }, cfg, profile);
+  const timeline = milestoneTimeline(cfg, profile, settings.book3, run.ossu);
   const nextId = timeline.find((m) => m.date >= ev.today && !run.milestones[m.id])?.id;
   const toggle = (id: string) => put(K.milestones(activeRunId), { ...run.milestones, [id]: !run.milestones[id] });
 
@@ -85,7 +85,7 @@ export function Run({ ctx, openDay }: { ctx: RunCtx; openDay: (d: string) => voi
         <Card title="Milestones" right={<span className="small">{timeline.filter((m) => m.checkable && run.milestones[m.id]).length} of {timeline.filter((m) => m.checkable).length} done</span>}>
           <ol className="timeline">
             {timeline.map((m) => {
-              const done = !!run.milestones[m.id];
+              const done = !!run.milestones[m.id] || !!m.done;
               const past = m.date < ev.today;
               return (
                 <li key={m.id} className={`tl-${m.kind}${done ? " done" : ""}${past && !done ? " past" : ""}${m.id === nextId ? " next" : ""}`}>
@@ -109,7 +109,7 @@ export function Run({ ctx, openDay }: { ctx: RunCtx; openDay: (d: string) => voi
             })}
           </ol>
           {profile.moneyMilestones.length === 0 && <p className="small">Import your profile in Settings to add your money milestones.</p>}
-          <p className="small">OSSU project milestones appear once your week-by-week map is set in Learn.</p>
+          {!timeline.some((m) => m.kind === "ossu") && <p className="small">OSSU projects appear here once they are assigned to a week in Learn.</p>}
         </Card>
       </div>
     </div>

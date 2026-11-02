@@ -54,10 +54,10 @@ export function Week({ ctx, week, setWeek, openDay }: { ctx: RunCtx; week: numbe
   const alert = floorDayAlert(ev, week, cfg);
   const elapsed = days.filter((d) => d.status === "WON" || d.status === "LOST").length;
   const weekAllowance = cfg.dailyAllowance * days.length;
-  const own = weekInsights(ev, run, cfg, week, profile);
+  const own = weekInsights(ev, ctx.inputs, cfg, week, profile);
   // Early in a week (e.g. Monday) there's nothing decided yet: show last week's takeaways instead.
   const fallback = own.length === 0 && week > 1 && days.some((d) => d.date === ev.today);
-  const insights = fallback ? weekInsights(ev, run, cfg, week - 1, profile) : own;
+  const insights = fallback ? weekInsights(ev, ctx.inputs, cfg, week - 1, profile) : own;
   const noteWeek = fallback ? week - 1 : week;
   const note = run.weekNotes[noteWeek] ?? "";
   const saveNote = (text: string) => put(K.weekNote(activeRunId, noteWeek), { text, updatedAt: new Date().toISOString() });

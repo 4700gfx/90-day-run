@@ -189,6 +189,31 @@ export function Settings({ ctx }: { ctx: RunCtx }) {
             </label>
           </Card>
 
+          <Card title="Body & Learn">
+            <span className="small">Lift names</span>
+            <div className="grid3">
+              {[0, 1, 2].map((i) => (
+                <input
+                  key={i}
+                  type="text"
+                  aria-label={`Lift ${i + 1} name`}
+                  value={(settings.liftNames ?? ctx.lifts)[i] ?? ""}
+                  placeholder={`Lift ${i + 1}`}
+                  onChange={(e) => {
+                    const names = [0, 1, 2].map((j) => (settings.liftNames ?? ctx.lifts)[j] ?? `Lift ${j + 1}`);
+                    names[i] = e.target.value;
+                    saveSettings({ liftNames: names });
+                  }}
+                />
+              ))}
+            </div>
+            <label className="field">
+              <span>GitHub username (optional, public repos only)</span>
+              <input type="text" autoCapitalize="none" autoComplete="off" spellCheck={false} value={settings.githubUser ?? ""} placeholder="e.g. 4700gfx" onChange={(e) => saveSettings({ githubUser: e.target.value.trim() || undefined })} />
+            </label>
+            <p className="small">Used only to suggest your daily commit. It never marks it for you.</p>
+          </Card>
+
           <Card title="Backup">
             <p className="small">A manual backup of everything, including the Run 1 archive.</p>
             <input ref={backupFile} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && void importBackup(e.target.files[0])} />

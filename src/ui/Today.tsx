@@ -18,7 +18,10 @@ import { capCheck } from "../engine/money";
 import type { DayLog } from "../engine/types";
 import { K } from "../store/records";
 import { put } from "../store/store";
+import { appliesOn } from "../engine/evaluate";
+import { defaultFollowUp, type JobApp } from "../engine/jobs";
 import { addSpend, clearDay, removeSpend } from "./actions";
+import { useGithubPushes } from "./github";
 import { Card, StatusChip, emptyLog, fmtDate, graceBadge, habitLabel, money, newId } from "./common";
 import { StreakMap } from "./StreakMap";
 import type { RunCtx } from "./useRun";
@@ -191,7 +194,10 @@ function DayLogView({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate
     );
   };
 
-  const applies = log.appliesCount;
+  const applies = appliesOn(ctx.inputs, date);
+  const jobsToday = run.jobs.filter((j) => !j.deleted && j.date === date).length;
+  const [quickJob, setQuickJob] = useState(false);
+  const gh = useGithubPushes(settings.githubUser);
   const applyBadge = graceBadge(res.grace.apply, ws.grace.apply?.remaining ?? 0);
   const payday = isPayday(date, cfg);
 
@@ -249,6 +255,16 @@ function DayLogView({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate
             )}
             {row("meals")}
             {row("commit")}
+            {(gh.pushes[date] ?? 0) > 0 && log.habits.commit !== true && (
+              <li className="prompt ok">
+                <span>
+                  GitHub shows {gh.pushes[date]} public commit{gh.pushes[date] === 1 ? "" : "s"} pushed this day. Mark it done?
+                </span>
+                <button className="btn primary small-btn" onClick={() => setHabit("commit", true)}>
+                  Mark done
+                </button>
+              </li>
+            )}
             <li>
               <div className={`habit static ${applies >= cfg.applyTarget ? "on" : ""}`}>
                 <span className="tick" aria-hidden="true">
@@ -265,14 +281,19 @@ function DayLogView({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate
                   <span className="mono count" aria-live="polite">
                     {applies}/{cfg.applyTarget}
                   </span>
-                  <button className="btn icon primary" aria-label="One more application" onClick={() => update({ appliesCount: Math.min(99, applies + 1) })}>
+                  <button className="btn icon primary" aria-label="One more application" onClick={() => {
+                    update({ appliesCount: Math.min(99, applies + 1) });
+                    setQuickJob(true);
+                  }}>
                     +
                   </button>
                 </span>
               </div>
               <div className="row-tag">
+                {jobsToday > 0 && <span className="small">{jobsToday} in pipeline · </span>}
                 <span className={`tag t-${applyBadge.tone}`}>{applyBadge.text}</span>
               </div>
+              {quickJob && <QuickJob ctx={ctx} date={date} close={() => setQuickJob(false)} />}
             </li>
             {row("read")}
           </ul>
@@ -526,6 +547,34 @@ function FutureDay({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate:
       <Card title="Streak map" right={<span className="small">{ctx.stats.wonDays} won · {ctx.stats.lostDays} lost</span>}>
         <StreakMap ctx={ctx} onOpen={setDate} compact selected={date} />
       </Card>
+    </div>
+  );
+}
+
+/** Optional: after +1, log the application to the Jobs pipeline (company + role is enough). */
+function QuickJob({ ctx, date, close }: { ctx: RunCtx; date: string; close: () => void }) {
+  const [company, setCompany] = useState("");
+  const [role, setRole] = useState("Software Engineer");
+  const save = () => {
+    if (!company.trim()) return close();
+    const id = newId();
+    const job: JobApp = { id, date, company: company.trim(), role: role.trim() || "Software Engineer", source: "LinkedIn", status: "Applied", followUp: defaultFollowUp(date), updatedAt: new Date().toISOString() };
+    put(K.job(ctx.activeRunId, id), job);
+    close();
+  };
+  return (
+    <div className="quickjob">
+      <span className="small">Add it to the Jobs pipeline? (optional)</span>
+      <input type="text" aria-label="Company" placeholder="Company" value={company} autoFocus onChange={(e) => setCompany(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
+      <input type="text" aria-label="Role" placeholder="Role" value={role} onChange={(e) => setRole(e.target.value)} onKeyDown={(e) => e.key === "Enter" && save()} />
+      <div className="row-btns" style={{ marginTop: 0 }}>
+        <button className="btn primary small-btn" onClick={save} disabled={!company.trim()}>
+          Add to pipeline
+        </button>
+        <button className="btn small-btn" onClick={close}>
+          Skip
+        </button>
+      </div>
     </div>
   );
 }

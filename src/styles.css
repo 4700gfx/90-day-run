@@ -408,3 +408,43 @@ select { min-height: 38px; padding: 6px 8px; border-radius: 9px; border: 1px sol
 @media (min-width: 600px) { .step-fields { margin-left: 26px; } }
 .step-fields label { display: grid; gap: 2px; font-size: 11px; color: var(--ink2); font-weight: 600; }
 .step-fields .span2 { grid-column: span 2; }
+.quickjob { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; padding: 10px; border: 1px dashed var(--line); border-radius: 10px; }
+.quickjob .small, .quickjob .row-btns { grid-column: 1 / -1; margin: 0; }
+li.prompt { list-style: none; }
+.chart .band { fill: var(--accent-soft); }
+
+/* ---------- phase 5 ---------- */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+.subhead { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); margin: 12px 0 6px; }
+.ossu-list, .map-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ossu-item { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.ossu-item.done .ossu-title { text-decoration: line-through; color: var(--ink2); }
+.ossu-title { font-weight: 600; }
+.ossu-editor { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 6px; }
+.ossu-editor summary { cursor: pointer; font-weight: 700; font-size: 13px; min-height: 36px; display: flex; align-items: center; }
+.map-list li { display: grid; grid-template-columns: 20px 1fr 110px; gap: 6px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.map-list li.done .map-title { color: var(--ink2); text-decoration: line-through; }
+.map-list input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.map-list .map-title { min-height: 34px; padding: 4px 8px; font-size: 13px; }
+.map-list select { min-height: 34px; font-size: 13px; }
+.map-btns { grid-column: 2 / -1; display: flex; gap: 4px; justify-content: flex-end; }
+@media (min-width: 1100px) { .map-list li { grid-template-columns: 20px 1fr 110px auto; } .map-btns { grid-column: auto; } }
+.jobform { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+@media (min-width: 1100px) { .jobform { grid-template-columns: 1.2fr 1.2fr 0.8fr 9rem 1.2fr auto; } }
+.jobtable { min-width: 620px; }
+.jobtable select, .jobtable input[type="date"] { min-height: 32px; padding: 2px 6px; font-size: 12px; }
+.thbtn { background: none; border: 0; color: var(--ink2); font-weight: 700; font-size: 12px; padding: 4px 0; cursor: pointer; min-height: 32px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--ink); font-weight: 700; text-decoration: underline; text-decoration-color: var(--line); cursor: pointer; text-align: left; min-height: 32px; }
+.detailrow td { background: var(--surface2); }
+.jobedit { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+.jobedit .span2 { grid-column: span 2; }
+input[type="url"] { min-height: 38px; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); width: 100%; font-size: 14px; }
+@media (pointer: coarse) { input[type="url"] { min-height: 44px; font-size: 16px; } }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(170px, 1fr); gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.bcol { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px; display: grid; gap: 6px; align-content: start; min-height: 120px; }
+.bcol h3 { margin: 0 0 2px; font-size: 13px; }
+.bcard { background: var(--surface2); border: 1px solid var(--line); border-radius: 9px; padding: 8px; display: grid; gap: 2px; font-size: 13px; }
+.bcard .small { margin: 0; }
+.bmove { display: flex; justify-content: space-between; margin-top: 4px; }
+.chart .small-label { font-size: 11px; }

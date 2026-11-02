@@ -3,6 +3,9 @@ import { dateForDay, dayNumber, weekOf } from "../engine/dates";
 import { useStore } from "../store/store";
 import { Card } from "./common";
 import { Settings } from "./Settings";
+import { Body } from "./Body";
+import { Jobs } from "./Jobs";
+import { Learn } from "./Learn";
 import { Money } from "./Money";
 import { Run } from "./Run";
 import { Today } from "./Today";
@@ -15,9 +18,9 @@ const TABS: { id: Tab; label: string; icon: string; phase?: number }[] = [
   { id: "week", label: "Week", icon: "▦" },
   { id: "run", label: "Run", icon: "◫" },
   { id: "money", label: "Money", icon: "$" },
-  { id: "body", label: "Body", icon: "◭", phase: 5 },
-  { id: "jobs", label: "Jobs", icon: "▤", phase: 5 },
-  { id: "learn", label: "Learn", icon: "✎", phase: 5 },
+  { id: "body", label: "Body", icon: "◭" },
+  { id: "jobs", label: "Jobs", icon: "▤" },
+  { id: "learn", label: "Learn", icon: "✎" },
   { id: "review", label: "Review", icon: "↺", phase: 6 },
   { id: "settings", label: "Settings", icon: "⚙" },
 ];
@@ -127,6 +130,9 @@ export function App() {
           />
         )}
         {tab === "money" && <Money ctx={ctx} />}
+        {tab === "body" && <Body ctx={ctx} />}
+        {tab === "jobs" && <Jobs ctx={ctx} />}
+        {tab === "learn" && <Learn ctx={ctx} />}
         {tab === "settings" && <Settings ctx={ctx} />}
         {current.phase && (
           <div className="screen">
