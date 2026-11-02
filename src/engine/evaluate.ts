@@ -8,11 +8,14 @@ import type { DayLog, DayResult, DayStatus, GraceResult, ISODate, Outcome, RunIn
 export const isFullyLogged = (log: DayLog | undefined): boolean =>
   !!log && TOGGLE_HABITS.every((h) => log.habits[h] === true || log.habits[h] === false);
 
+/** Applications on a date: the Today counter or the jobs logged in the pipeline, whichever is higher. */
+export const appliesOn = (inputs: RunInputs, date: ISODate): number => Math.max(inputs.days[date]?.appliesCount ?? 0, inputs.jobCounts?.[date] ?? 0);
+
 /** Past days: anything not marked a hit is a miss. Today: unknown until fully logged. */
-function outcome(h: HabitId, log: DayLog | undefined, isToday: boolean, cfg: RunConfig): Outcome {
+function outcome(h: HabitId, log: DayLog | undefined, isToday: boolean, cfg: RunConfig, applies = 0): Outcome {
   const pendingToday = isToday && !isFullyLogged(log);
   if (h === "apply") {
-    if ((log?.appliesCount ?? 0) >= cfg.applyTarget) return "hit";
+    if (applies >= cfg.applyTarget) return "hit";
     return pendingToday ? "unknown" : "miss";
   }
   const v = log?.habits[h];
@@ -66,7 +69,7 @@ export function evaluateRun(inputs: RunInputs, cfg: RunConfig, today: ISODate): 
     const tokenPrompt: HabitId[] = [];
     const block = tokenBlockOf(week);
     for (const h of GRACE_HABITS) {
-      const o = outcome(h, log, isToday, cfg);
+      const o = outcome(h, log, isToday, cfg, appliesOn(inputs, date));
       if (o !== "miss") {
         grace[h] = { kind: o };
         prevMiss[h] = false;

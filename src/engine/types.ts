@@ -47,6 +47,8 @@ export interface RunInputs {
   days: Record<ISODate, DayLog>;
   spend: SpendEntry[];
   hysa: HysaDeposit[];
+  /** Jobs logged in the pipeline per date (applications count = max of this and the Today counter). */
+  jobCounts?: Record<ISODate, number>;
 }
 
 export type Outcome = "hit" | "miss" | "unknown";

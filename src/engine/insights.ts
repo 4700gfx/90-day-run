@@ -3,7 +3,7 @@
 import type { PersonalProfile } from "../config/profile";
 import { GRACE_HABITS, type HabitId, type RunConfig } from "../config/run.config";
 import { weekRange, weekday } from "./dates";
-import { weekSummary, type RunEvaluation } from "./evaluate";
+import { appliesOn, weekSummary, type RunEvaluation } from "./evaluate";
 import type { DayResult, RunInputs } from "./types";
 
 export interface Insight {
@@ -85,7 +85,7 @@ export function weekInsights(ev: RunEvaluation, inputs: RunInputs, cfg: RunConfi
   if (bigDays.length) out.push({ tone: "info", text: `Big spend days: ${bigDays.map((d) => `${DAY[weekday(d.date)]} ${usd(d.spend.today)}`).join(", ")}.` });
 
   // 6. Applications.
-  const apps = days.reduce((s, d) => s + (inputs.days[d.date]?.appliesCount ?? 0), 0);
+  const apps = days.reduce((s, d) => s + appliesOn(inputs, d.date), 0);
   const appTarget = cfg.applyTarget * days.length;
   out.push({ tone: apps >= appTarget ? "good" : "info", text: `${apps} applications of ${appTarget} planned for these ${days.length} days.` });
 

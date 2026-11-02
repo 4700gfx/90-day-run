@@ -1,8 +1,8 @@
 // Day 30/60/90 scorecards and the milestone timeline. Pure functions.
 import type { PersonalProfile } from "../config/profile";
-import { CHECKINS, HOLIDAYS, PHASE2_START, READING_PLAN, type RunConfig } from "../config/run.config";
-import { dateForDay } from "./dates";
-import type { RunEvaluation } from "./evaluate";
+import { CHECKINS, HOLIDAYS, PHASE2_START, READING_PLAN, type OssuItem, type RunConfig } from "../config/run.config";
+import { dateForDay, weekRange } from "./dates";
+import { appliesOn, type RunEvaluation } from "./evaluate";
 import { hysaBalance } from "./money";
 import type { HysaDeposit, ISODate, RunInputs } from "./types";
 
@@ -39,7 +39,7 @@ export function scorecards(ev: RunEvaluation, inputs: ScoreInputs, cfg: RunConfi
     for (let n = 1; n <= c.day; n++) {
       const date = dateForDay(n, cfg);
       if (date > asOf) break;
-      apps += inputs.days[date]?.appliesCount ?? 0;
+      apps += appliesOn(inputs, date);
     }
     const money = profile.checkinTargets[c.day] ?? {};
     const metrics: ScoreMetric[] = [
@@ -54,7 +54,7 @@ export function scorecards(ev: RunEvaluation, inputs: ScoreInputs, cfg: RunConfi
   });
 }
 
-export type MilestoneKind = "money" | "book" | "checkin" | "school" | "holiday";
+export type MilestoneKind = "money" | "book" | "checkin" | "school" | "holiday" | "ossu";
 export interface Milestone {
   id: string;
   date: ISODate;
@@ -62,10 +62,15 @@ export interface Milestone {
   kind: MilestoneKind;
   /** Can the user tick it off? (check-ins are scored, holidays just happen) */
   checkable: boolean;
+  /** Completion that comes from elsewhere (e.g. an OSSU project ticked in Learn). */
+  done?: boolean;
 }
 
-export function milestoneTimeline(cfg: RunConfig, profile: PersonalProfile, book3?: string): Milestone[] {
+export function milestoneTimeline(cfg: RunConfig, profile: PersonalProfile, book3?: string, ossu: OssuItem[] = []): Milestone[] {
   const items: Milestone[] = [];
+  for (const o of ossu)
+    if (o.kind === "project" && o.week != null && o.week >= 1 && o.week <= Math.ceil(cfg.lengthDays / 7))
+      items.push({ id: `ossu:${o.id}`, date: dateForDay(weekRange(o.week, cfg).last, cfg), label: `${o.title} (${o.track})`, kind: "ossu", checkable: false, done: o.done });
   profile.moneyMilestones.forEach((m, i) => items.push({ id: `money:${m.date}:${i}`, date: m.date, label: m.label, kind: "money", checkable: true }));
   for (const r of READING_PLAN) {
     const book = r.editable && book3 ? book3 : r.book;
