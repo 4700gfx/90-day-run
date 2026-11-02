@@ -93,15 +93,15 @@ table.log th{color:var(--ink2);font-weight:600;border-top:none}
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="title">The 90-Day Run</div>
-      <div class="sub">Sep 27 – Dec 25, 2026 · <span id="syncState" class="sync">local</span> · <button id="syncBtn" class="btn" style="padding:2px 9px;font-size:11px">Sync</button></div>
+      <div class="title">The 90-Day Run — Restart</div>
+      <div class="sub">Nov 2, 2026 – Jan 30, 2027 ·<span id="syncState" class="sync">local</span> · <button id="syncBtn" class="btn" style="padding:2px 9px;font-size:11px">Sync</button></div>
       <div class="bib"><span class="num mono" id="dayNum">1</span><span class="of">/ 90</span></div>
     </div>
     <div class="stats">
       <div class="stat"><div class="v" id="sWon">0</div><div class="l">days won</div></div>
       <div class="stat"><div class="v" id="sStreak">0</div><div class="l">win streak</div></div>
       <div class="stat"><div class="v" id="sApps">0</div><div class="l">applications</div></div>
-      <div class="stat"><div class="v" id="sHysa">$0</div><div class="l">in Ally HYSA</div></div>
+      <div class="stat"><div class="v" id="sHysa">$0</div><div class="l">in Marcus HYSA</div></div>
     </div>
   </header>
 
@@ -151,38 +151,39 @@ table.log th{color:var(--ink2);font-weight:600;border-top:none}
     <div id="tab-milestones" hidden></div>
     <div id="tab-insights" hidden></div>
   </section>
-  <p class="small" style="margin-top:14px">Rules: workout, daily spend and HYSA are strict. Meals, code, applications and reading each get one miss per week (Sun–Sat), never two days in a row. Spend is checked month-to-date against $20/day.</p>
+  <p class="small" style="margin-top:14px">Rules: workout, daily spend and HYSA are strict. Meals, code, 5 applications and reading each get one miss per week (Mon–Sun), never two days in a row. Sep 27 run data is archived, not deleted. Spend is checked month-to-date against $20/day.</p>
 </div>
 
 <script>
 (function(){
-const START = new Date(2026,8,27), DAYS = 90, DAILY_SPEND = 20, HYSA_TARGET = 1780, APP_TARGET = 900;
-const WORKOUT = ["Walk + lift","Lift","Lift","Lift","Walk / run","Walk / run","Short workout"];
+// Run 2 (restart): Day 0 = Sun Nov 1 (setup, unscored), Day 1 = Mon Nov 2, 2026, Day 90 = Sat Jan 30, 2027
+const START = new Date(2026,10,2), DAYS = 90, DAILY_SPEND = 20, HYSA_TARGET = 1625, APP_TARGET = 450, APPS_PER_DAY = 5;
+const WORKOUT = ["Walk + lift","Lift","Lift","Lift","Walk / run","Walk / run","Short workout (30–45 min)"];
 const DOWN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const RECIPES = {1:["Chicken & Sweet Potato Bowl","Sweet Chili Shrimp"],2:["Salmon & Salad","Shrimp & Lamb Alfredo"],3:["Herb-Crusted Steak","Air Fried Wings"],4:["Blackened Shrimp Hash","Garlic Butter Lamb Chops"]};
+const RECIPES = {1:["Island Lime-Garlic Chicken","Blackened Salmon & Sweet Potato Hash"],2:["Grilled Chicken & Sweet Potato Bowl","Garlic Butter Lamb Chops"],3:["Smothered Chicken & Onion Gravy","Island Stewed Lamb"],4:["Grilled Salmon & Salad","Shrimp & Lamb Alfredo"],5:["Caribbean Lime Shrimp & Peppers","Smothered Steak & Onions"],6:["Herb-Crusted Steak & Mashed Sweet Potato","Sweet Chili Shrimp"],7:["Blackened Shrimp Hash","Air Fried Wings & Skillet Sweet Potato"]};
 const GRACE = ["meals","code","apps","read"];
 const MILESTONES = [
-  ["2026-10-04","Update OSSU tracker after the detour and send the remaining course list"],
-  ["2026-10-06","Request validation letters on all 4 collections"],
-  ["2026-10-06","Confirm every bill is on autopay"],
-  ["2026-10-07","Pay tabs ($200), pawn shop ($200), overdue Turo ($220)"],
-  ["2026-10-10","Collect 3 insurance quotes"],
-  ["2026-10-26","Day 30 check-in"],
-  ["2026-11-01","Open Ally HYSA, deposit October leftover, set auto-transfer"],
-  ["2026-11-15","Geico ($158) paid with written pay-for-delete"],
-  ["2026-11-25","Day 60 check-in"],
-  ["2026-12-15","Portfolio Recovery settled with written pay-for-delete"],
-  ["2026-12-25","Day 90 final review + January plan"]
+  ["2026-11-01","Day 0: Marcus HYSA opened, $125 deposited, payday recurring transfer set"],
+  ["2026-11-07","Credit reports pulled; 4 validation letters mailed (certified); Collections savings opened"],
+  ["2026-12-01","Day 30 check-in: 25 won days · HYSA $625 · 150 applications"],
+  ["2026-12-14","Geico ($158) paid with written pay-for-delete"],
+  ["2026-12-21","Portfolio Recovery settled with written pay-for-delete"],
+  ["2026-12-31","Day 60 check-in: 52 won days · HYSA $1,125 · 300 applications · 2 collections cleared"],
+  ["2027-01-04","MDC Spring classes start (Phase 2)"],
+  ["2027-01-15","Receivable Management settled with written pay-for-delete"],
+  ["2027-01-30","Day 90: 80 won days · HYSA ≥ $1,625 · 450 applications · 3 of 4 collections cleared"]
 ];
-const BOOKS = [["Psycho-Cybernetics",16],["The Way of the Superior Man",51],["The 48 Laws of Power",48]];
+// [title, chapters, first chapter number, unit]
+const BOOKS = [["The 48 Laws of Power",31,18,"Law"],["The Way of the Superior Man",51,1,"ch"],["The Psychology of Money",8,1,"ch"]];
 
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const parse=k=>{const[a,b,c]=k.split("-").map(Number);return new Date(a,b-1,c)};
 const dayIndex=d=>Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-START)/86400000);
-const REF=new Date(2026,7,31);
-const rotation=d=>{const mon=addDays(d,d.getDay()===0?-6:1-d.getDay());return (Math.round((mon-REF)/(7*86400000))%4)+1};
-const eatOut=(rot,dow)=>rot%2===1?(dow===6?"Chick-fil-A":"Taco Bell"):(dow===6?"Pollo Tropical":"Burger King");
+// Run Week n = Mon–Sun starting Mon Nov 2; Mon–Fri meals use cycle ((n-1) % 7) + 1, cooked the Sunday before
+const runWeek=d=>Math.floor(dayIndex(d)/7)+1;
+const rotation=d=>((runWeek(d)-1)%7+7)%7+1;
+const eatOut=(wk,dow)=>wk%2===1?(dow===6?"Chick-fil-A":"Chipotle"):(dow===6?"Wingstop":"Subway");
 const money=n=>"$"+(Math.round(n*100)/100).toLocaleString(undefined,{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
 
 let S = {days:{},hysa:[],body:[],milestones:{},chapters:0};
@@ -190,7 +191,20 @@ let sel = Math.max(0,Math.min(DAYS-1,dayIndex(new Date())));
 let db=null, saveTimer=null;
 
 // ---------- persistence ----------
-function loadLocal(){try{const r=localStorage.getItem("run90");if(r)S=Object.assign(S,JSON.parse(r));}catch(e){}}
+// Schema v2: archive the Sep 27 run (read-only) under archive.run1 and start Run 2.
+// Entries dated on/after Nov 1, 2026 belong to the restart, so they're copied forward.
+// Idempotent: data that already has schemaVersion >= 2 is returned untouched.
+function migrate(old){
+  if(old&&old.schemaVersion>=2)return old;
+  const src=old||{};
+  const CUT="2026-11-01";
+  const next={schemaVersion:2,runId:"run-2",days:{},hysa:[],body:[],milestones:{},chapters:0,archive:{run1:JSON.parse(JSON.stringify(src))}};
+  Object.keys(src.days||{}).forEach(k=>{if(k>=CUT)next.days[k]=src.days[k];});
+  next.hysa=(src.hysa||[]).filter(h=>h.date>=CUT);
+  next.body=(src.body||[]).filter(b=>b.date>=CUT);
+  return next;
+}
+function loadLocal(){try{const r=localStorage.getItem("run90");if(r){const raw=JSON.parse(r);if(!raw.schemaVersion){try{localStorage.setItem("run90_run1_backup",r)}catch(e){}}S=Object.assign(S,migrate(raw));localStorage.setItem("run90",JSON.stringify(S));}}catch(e){}}
 function localUpdatedAt(){return Number(localStorage.getItem("run90_t")||0)}
 function markLocalUpdated(){try{localStorage.setItem("run90_t",String(Date.now()))}catch(e){}}
 function getSyncKey(){return localStorage.getItem("run90_key")||""}
@@ -218,7 +232,7 @@ function initSync(){
     if(snap.exists){
       const v=snap.data();
       if(v&&v.json&&Number(v.updated||0)>localUpdatedAt()){
-        S=Object.assign({days:{},hysa:[],body:[],milestones:{},chapters:0},JSON.parse(v.json));
+        S=Object.assign({days:{},hysa:[],body:[],milestones:{},chapters:0},migrate(JSON.parse(v.json)));
         markLocalUpdated();
         try{localStorage.setItem("run90",JSON.stringify(S));}catch(e){}
         render();
@@ -232,14 +246,14 @@ initSync();
 
 // ---------- logic ----------
 const dayData=i=>S.days[key(addDays(START,i))];
-function hit(h,dd){if(!dd)return false;if(h==="apps")return (dd.apps||0)>=10;return !!dd[h];}
+function hit(h,dd){if(!dd)return false;if(h==="apps")return (dd.apps||0)>=APPS_PER_DAY;return !!dd[h];}
 function mtd(d){ // spend month-to-date through d
   let sum=0;for(let x=new Date(d.getFullYear(),d.getMonth(),1);x<=d;x=addDays(x,1)){const e=S.days[key(x)];if(e&&e.spend)sum+=Number(e.spend)||0;}
   return sum;
 }
-const isRunSept=d=>d.getFullYear()===2026&&d.getMonth()===8;
-function poolFor(d){const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return isRunSept(d)?DAILY_SPEND*4:DAILY_SPEND*dim}
-function allowance(d){return isRunSept(d)?DAILY_SPEND*(d.getDate()-26):DAILY_SPEND*d.getDate();}
+// Allowance is per calendar month: $20 × day of month, resets on the 1st
+function poolFor(d){const dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();return DAILY_SPEND*dim}
+function allowance(d){return DAILY_SPEND*d.getDate();}
 function spendOk(d){return mtd(d)<=allowance(d)+0.001}
 // grace evaluation: returns per-day {missed:[h], illegal:[h], legal:[h]}
 function graceEval(){
@@ -270,7 +284,7 @@ function status(i,G){
 }
 
 // ---------- render ----------
-const NAMES={workout:"Workout",spend:"Spend under daily",meals:"Meal plan",code:"Commit code",apps:"10 applications",read:"Read a chapter"};
+const NAMES={workout:"Workout",spend:"Spend under daily",meals:"Meal plan",code:"Commit code",apps:APPS_PER_DAY+" applications",read:"Read a chapter"};
 function render(){
   const G=graceEval();
   const d=addDays(START,sel), dd=S.days[key(d)]||{};
@@ -279,8 +293,9 @@ function render(){
   document.getElementById("dayNum").textContent=Math.max(1,Math.min(90,todayIdx+1));
   document.getElementById("dayTitle").textContent=`Day ${sel+1} · ${DOWN[dow]}, ${MON[d.getMonth()]} ${d.getDate()}`;
   document.getElementById("jumpDate").value=key(d);
-  const meal=dow===0||dow===6?`Eating out: ${eatOut(rot,dow)}${dow===0?` · batch cook rotation ${rotation(addDays(d,1))}`:""}`:`Rotation ${rot}: ${RECIPES[rot][0]} / ${RECIPES[rot][1]}`;
-  document.getElementById("daySub").textContent=`${WORKOUT[dow]} · ${meal}`;
+  const wkN=runWeek(d);
+  const meal=dow===0||dow===6?`Eating out: ${eatOut(wkN,dow)}${dow===0&&sel<DAYS-1?` · batch cook cycle ${rotation(addDays(d,1))}`:""}`:`Cycle ${rot}: ${RECIPES[rot][0]} / ${RECIPES[rot][1]}`;
+  document.getElementById("daySub").textContent=`Week ${wkN} · ${WORKOUT[dow]} · ${meal}`;
   const st=status(sel,G);
   const rEl=document.getElementById("dayResult");
   rEl.className="result "+(st==="won"?"r-won":st==="lost"?"r-lost":"r-open");
@@ -293,9 +308,9 @@ function render(){
   H.innerHTML=`
    <div class="habit"><button class="tick ${dd.workout?"on":""}" data-h="workout">${dd.workout?"✓":""}</button><div><div class="hname">Workout</div><div class="hmeta">${WORKOUT[dow]} · bad day: walk 1+ mile</div></div><span class="tag t-strict">strict</span></div>
    <div class="habit"><span></span><div><div class="hname">Spend today</div><div class="hmeta">Month to date ${money(m)} of ${money(a)} allowed · ${m<=a?`<span style="color:var(--win)">under</span>`:`<span style="color:var(--loss)">over by ${money(m-a)}</span>`}</div></div><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" step="0.01" id="spend" value="${dd.spend??""}" placeholder="$0"><span class="tag t-strict">strict</span></div></div>
-   <div class="habit"><button class="tick ${dd.meals?"on":""}" data-h="meals">${dd.meals?"✓":""}</button><div><div class="hname">Meal plan as written</div><div class="hmeta">${dow===0||dow===6?eatOut(rot,dow)+" order from the guide":"Prepped lunch + dinner, carbs ≤ 175g"}</div></div>${gtag("meals")}</div>
+   <div class="habit"><button class="tick ${dd.meals?"on":""}" data-h="meals">${dd.meals?"✓":""}</button><div><div class="hname">Meal plan as written</div><div class="hmeta">${dow===0||dow===6?eatOut(wkN,dow)+" order from the guide":"Prepped lunch + dinner, carbs ≤ 175g"}</div></div>${gtag("meals")}</div>
    <div class="habit"><button class="tick ${dd.code?"on":""}" data-h="code">${dd.code?"✓":""}</button><div><div class="hname">Commit code</div><div class="hmeta">Any repo · push before 10:30 PM</div></div>${gtag("code")}</div>
-   <div class="habit"><span></span><div><div class="hname">Quick applies</div><div class="hmeta">${(dd.apps||0)>=10?`<span style="color:var(--win)">10 done</span>`:`${10-(dd.apps||0)} to go`}</div></div><div style="display:flex;gap:8px;align-items:center"><div class="stepper"><button data-a="-1">−</button><span class="n">${dd.apps||0}</span><button data-a="1">+</button></div>${gtag("apps")}</div></div>
+   <div class="habit"><span></span><div><div class="hname">Quick applies</div><div class="hmeta">${(dd.apps||0)>=APPS_PER_DAY?`<span style="color:var(--win)">${APPS_PER_DAY} done</span>`:`${APPS_PER_DAY-(dd.apps||0)} to go`}</div></div><div style="display:flex;gap:8px;align-items:center"><div class="stepper"><button data-a="-1">−</button><span class="n">${dd.apps||0}</span><button data-a="1">+</button></div>${gtag("apps")}</div></div>
    <div class="habit"><button class="tick ${dd.read?"on":""}" data-h="read">${dd.read?"✓":""}</button><div><div class="hname">Read a chapter</div><div class="hmeta">${bookNow()}</div></div>${gtag("read")}</div>
    <div class="formrow" style="justify-content:flex-end"><button class="btn ${dd.closed?"":"primary"}" id="closeDay">${dd.closed?"Reopen day":"Close out the day"}</button></div>`;
   H.querySelectorAll(".tick").forEach(b=>b.onclick=()=>{const h=b.dataset.h;upd(x=>{x[h]=!x[h];if(h==="read")S.chapters=Math.max(0,(S.chapters||0)+(x[h]?1:-1));});});
@@ -307,7 +322,7 @@ function render(){
   // calendar
   const C=document.getElementById("cal");let html=`<span></span>`;
   for(let w=0;w<13;w++)html+=`<span class="wk">W${w+1}</span>`;
-  for(let r=0;r<7;r++){html+=`<span class="lbl">${DOWN[r]}</span>`;
+  for(let r=0;r<7;r++){html+=`<span class="lbl">${DOWN[(START.getDay()+r)%7]}</span>`;
     for(let w=0;w<13;w++){const i=w*7+r;if(i>=DAYS){html+=`<span class="sq void"></span>`;continue;}
       const s=status(i,G);html+=`<button class="sq ${s==="won"?"won":s==="lost"?"lost":s==="part"?"part":""} ${i===sel?"sel":""} ${i===todayIdx?"today":""}" data-i="${i}" title="Day ${i+1}">${i+1}</button>`;}}
   C.innerHTML=html;C.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{sel=Number(b.dataset.i);render();});
@@ -325,7 +340,7 @@ function render(){
   document.getElementById("sApps").textContent=apps;document.getElementById("sHysa").textContent=money(hysa);
   renderTabs(G,apps,hysa,streak);
 }
-function bookNow(){let n=S.chapters||0;for(const[b,c]of BOOKS){if(n<c)return `${b} · next: chapter ${n+1} of ${c}`;n-=c;}return "All three books finished";}
+function bookNow(){let n=S.chapters||0;for(const[b,c,first,unit]of BOOKS){if(n<c)return `${b} · next: ${unit} ${first+n}`;n-=c;}return "All three books finished";}
 function upd(fn){const k=key(addDays(START,sel));const x=S.days[k]||{};fn(x);S.days[k]=x;
   save();render();}
 
@@ -337,9 +352,9 @@ function renderTabs(G,apps,hysa,streak){
   document.getElementById("tab-money").innerHTML=`
    <div class="kv"><div><div class="v">${money(m)}</div><div class="l">${mon} spend so far</div></div><div><div class="v">${money(Math.max(0,a-m))}</div><div class="l">room left today</div></div><div><div class="v">${money(P-m)}</div><div class="l">left in ${mon} pool</div></div><div><div class="v">${money(hysa)}</div><div class="l">HYSA of ${money(HYSA_TARGET)}</div></div></div>
    <div class="sec"><div class="row"><span>Daily spend pool (eating out, fun, shopping, car extras, casino)</span><span class="mono">${money(m)} / ${money(P)}</span></div><div class="bar ${m<=a?"ok":"over"}"><span style="width:${pct}%"></span></div></div>
-   <div class="sec"><div class="row"><span>Ally HYSA</span><span class="mono">${money(hysa)} / ${money(HYSA_TARGET)}</span></div><div class="bar"><span style="width:${Math.min(100,hysa/HYSA_TARGET*100)}%"></span></div>
+   <div class="sec"><div class="row"><span>Marcus HYSA</span><span class="mono">${money(hysa)} / ${money(HYSA_TARGET)}</span></div><div class="bar"><span style="width:${Math.min(100,hysa/HYSA_TARGET*100)}%"></span></div>
    <div class="formrow"><input type="date" id="hDate" value="${key(new Date())}"><input type="number" id="hAmt" placeholder="$ amount"><button class="btn primary" id="hAdd">Log deposit</button></div>
-   <div class="scroll"><table class="log"><tr><th>Date</th><th>Deposit</th><th></th></tr>${S.hysa.map((h,i)=>`<tr><td class="mono">${h.date}</td><td class="mono">${money(Number(h.amt))}</td><td><button class="btn" data-hd="${i}">Remove</button></td></tr>`).join("")||`<tr><td colspan="3" class="small">Plan: $480 on Nov 1, then $650 each payday in Nov and Dec.</td></tr>`}</table></div></div>`;
+   <div class="scroll"><table class="log"><tr><th>Date</th><th>Deposit</th><th></th></tr>${S.hysa.map((h,i)=>`<tr><td class="mono">${h.date}</td><td class="mono">${money(Number(h.amt))}</td><td><button class="btn" data-hd="${i}">Remove</button></td></tr>`).join("")||`<tr><td colspan="3" class="small">Plan: $125 opening deposit on Nov 1, then $500+ each payday. Target $1,625 by Day 90 (stretch $2,000).</td></tr>`}</table></div></div>`;
   document.getElementById("hAdd").onclick=()=>{const amt=Number(document.getElementById("hAmt").value);if(!amt)return;S.hysa.push({date:document.getElementById("hDate").value,amt});S.hysa.sort((a,b)=>a.date<b.date?-1:1);save();render();};
   document.querySelectorAll("[data-hd]").forEach(b=>b.onclick=()=>{S.hysa.splice(Number(b.dataset.hd),1);save();render();});
 
@@ -357,7 +372,7 @@ function renderTabs(G,apps,hysa,streak){
 
   // body
   document.getElementById("tab-body").innerHTML=`
-   <p class="small">Sunday weigh-in. The goal is holding 160–165 lbs while waist comes down and lifts go up. Starting weight: 163.</p>
+   <p class="small">Sunday weigh-in. Start 158 lb → build to 160, then hold 159–161 while waist comes down and lifts go up.</p>
    <div class="formrow"><input type="date" id="bDate" value="${key(new Date())}"><input type="number" id="bW" placeholder="Weight" step="0.1"><input type="number" id="bWaist" placeholder="Waist in" step="0.1"><input type="text" id="bLift" placeholder="Top lift, e.g. Bench 185x5" style="width:200px"><button class="btn primary" id="bAdd">Log</button></div>
    <div class="scroll sec"><table class="log"><tr><th>Date</th><th>Weight</th><th>Waist</th><th>Top lift</th><th></th></tr>${S.body.map((b,i)=>`<tr><td class="mono">${b.date}</td><td class="mono">${b.w||"—"}</td><td class="mono">${b.waist||"—"}</td><td>${(b.lift||"—").replace(/</g,"&lt;")}</td><td><button class="btn" data-bd="${i}">Remove</button></td></tr>`).join("")||`<tr><td colspan="5" class="small">No weigh-ins yet.</td></tr>`}</table></div>`;
   document.getElementById("bAdd").onclick=()=>{S.body.push({date:document.getElementById("bDate").value,w:document.getElementById("bW").value,waist:document.getElementById("bWaist").value,lift:document.getElementById("bLift").value});S.body.sort((a,b)=>a.date<b.date?-1:1);save();render();};
@@ -445,7 +460,7 @@ function renderInsights(G,apps,curStreak){
     <div class="legend"><span><i style="background:var(--win)"></i>Won</span><span><i style="background:var(--loss)"></i>Lost</span><span><i style="background:var(--grace)"></i>In progress</span><span><i style="background:var(--empty)"></i>Not logged</span></div>
    </div>
    <div class="sec"><h2 style="font-size:15px">Daily spend</h2>${lineChart(spendPoints,{band:[0,DAILY_SPEND],unit:""})}</div>
-   <div class="sec"><h2 style="font-size:15px">Weight trend</h2>${lineChart(S.body.filter(b=>b.w!==""&&b.w!=null).map(b=>({y:Number(b.w),label:b.date})),{band:[160,165],unit:" lb"})}</div>
+   <div class="sec"><h2 style="font-size:15px">Weight trend</h2>${lineChart(S.body.filter(b=>b.w!==""&&b.w!=null).map(b=>({y:Number(b.w),label:b.date})),{band:[159,161],unit:" lb"})}</div>
    <div class="sec"><h2 style="font-size:15px">Waist trend</h2>${lineChart(S.body.filter(b=>b.waist!==""&&b.waist!=null).map(b=>({y:Number(b.waist),label:b.date})),{unit:" in"})}</div>
    <div class="sec"><h2 style="font-size:15px">Needs closing</h2><div id="needsReview"></div></div>`;
 
