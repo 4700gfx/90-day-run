@@ -16,6 +16,8 @@ export interface DayLog {
   /** Extended Grace token the user confirmed for this day. Clear it to undo. */
   extendedGraceUsedFor?: HabitId;
   mealRescue?: boolean;
+  /** User confirmed no spending today (informational; spend is scored from entries). */
+  zeroSpend?: boolean;
   creatine?: boolean;
   proteinG?: number;
   updatedAt: string;
