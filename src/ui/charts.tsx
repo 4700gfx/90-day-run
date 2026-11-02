@@ -127,3 +127,103 @@ export function MtdChart({ points, monthDays, daily }: { points: MtdPoint[]; mon
     </div>
   );
 }
+
+export interface TrendPoint {
+  date: string;
+  value: number;
+  note?: string;
+}
+
+/** Weekly trend: one series, optional shaded band and target line, crosshair tooltip, table view. */
+export function TrendChart({ points, unit, band, target, label }: { points: TrendPoint[]; unit: string; band?: [number, number]; target?: number; label: string }) {
+  const [ref, W] = useWidth<HTMLDivElement>();
+  const [hover, setHover] = useState<number | null>(null);
+  if (points.length === 0) return <p className="small">No {label.toLowerCase()} entries yet.</p>;
+  const H = 150;
+  const pad = { l: 44, r: 30, t: 16, b: 22 };
+  const iw = W - pad.l - pad.r;
+  const ih = H - pad.t - pad.b;
+  const vals = [...points.map((p) => p.value), ...(band ?? []), ...(target != null ? [target] : [])];
+  let lo = Math.min(...vals);
+  let hi = Math.max(...vals);
+  const spanPad = Math.max(0.5, (hi - lo) * 0.15);
+  lo = Math.floor((lo - spanPad) * 2) / 2;
+  hi = Math.ceil((hi + spanPad) * 2) / 2;
+  const x = (i: number) => pad.l + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
+  const y = (v: number) => pad.t + ih - ((v - lo) / (hi - lo)) * ih;
+  const path = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join("");
+  const last = points[points.length - 1]!;
+  const hp = hover != null ? points[hover] : null;
+  const fmtV = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unit}`;
+  const onMove = (e: React.PointerEvent<SVGRectElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const i = points.length === 1 ? 0 : Math.round(((e.clientX - r.left) / r.width) * (points.length - 1));
+    setHover(Math.max(0, Math.min(points.length - 1, i)));
+  };
+  return (
+    <div className="chart" ref={ref}>
+      <svg width={W} height={H} role="img" aria-label={`${label}: latest ${fmtV(last.value)} on ${fmtDate(last.date)}, ${points.length} entries`}>
+        {band && <rect x={pad.l} width={iw} y={y(band[1])} height={y(band[0]) - y(band[1])} className="band" />}
+        {[lo, (lo + hi) / 2, hi].map((t) => (
+          <g key={t}>
+            <line x1={pad.l} x2={pad.l + iw} y1={y(t)} y2={y(t)} className="grid" />
+            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" className="axis">
+              {fmtV(Math.round(t * 10) / 10)}
+            </text>
+          </g>
+        ))}
+        {target != null && (
+          <>
+            <line x1={pad.l} x2={pad.l + iw} y1={y(target)} y2={y(target)} className="ref" />
+            <text x={pad.l + 6} y={y(target) - 5} className="dlabel muted small-label">
+              Target {fmtV(target)}
+            </text>
+          </>
+        )}
+        {band && (
+          <text x={pad.l + 6} y={y(band[0]) - 5} className="dlabel muted small-label">
+            Hold {band[0]}–{band[1]}
+          </text>
+        )}
+        <path d={path} className="line" />
+        {points.map((p, i) => (
+          <circle key={p.date} cx={x(i)} cy={y(p.value)} r={i === points.length - 1 || hover === i ? 4.5 : 3} className="dot" />
+        ))}
+        <text x={x(points.length - 1)} y={y(last.value) - 9} textAnchor="middle" className="dlabel">
+          {fmtV(last.value)}
+        </text>
+        {hp && <line x1={x(hover!)} x2={x(hover!)} y1={pad.t} y2={pad.t + ih} className="cross" pointerEvents="none" />}
+        <rect x={pad.l - 8} y={pad.t} width={iw + 16} height={ih} fill="transparent" onPointerMove={onMove} onPointerDown={onMove} onPointerLeave={() => setHover(null)} />
+      </svg>
+      {hp && (
+        <div className="tip" style={{ left: Math.min(W - 150, Math.max(0, x(hover!) - 70)) }} role="status">
+          <b>{fmtDate(hp.date)}</b>
+          <span>{fmtV(hp.value)}</span>
+          {hp.note && <span className="small">{hp.note}</span>}
+        </div>
+      )}
+      <details className="tableview">
+        <summary>Show as table</summary>
+        <table className="ttable">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">{label}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {points.map((p) => (
+              <tr key={p.date}>
+                <td>{fmtDate(p.date, { month: "short", day: "numeric" })}</td>
+                <td className="mono">
+                  {fmtV(p.value)}
+                  {p.note && ` (${p.note})`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    </div>
+  );
+}
