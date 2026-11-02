@@ -3,7 +3,6 @@ import {
   DAY0_CHECKLIST,
   HABITS,
   MEAL_RESCUES_PER_WEEK,
-  RUN,
   TOGGLE_HABITS,
   WORKOUT_FLOOR,
   type HabitId,
@@ -22,6 +21,7 @@ import { appliesOn } from "../engine/evaluate";
 import { defaultFollowUp, type JobApp } from "../engine/jobs";
 import { addSpend, clearDay, removeSpend } from "./actions";
 import { useGithubPushes } from "./github";
+import { logTime, scheduleFor } from "../engine/schedule";
 import { Card, StatusChip, emptyLog, fmtDate, graceBadge, habitLabel, money, newId } from "./common";
 import { StreakMap } from "./StreakMap";
 import type { RunCtx } from "./useRun";
@@ -55,7 +55,8 @@ export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDa
     </div>
   );
 
-  const showReminder = isToday && clock.hm >= RUN.logReminderTime && res && res.status === "PENDING" && !res.fullyLogged;
+  const reminderAt = logTime(settings.homeTime);
+  const showReminder = isToday && clock.hm >= reminderAt && res && res.status === "PENDING" && !res.fullyLogged;
 
   return (
     <div className="screen">
@@ -80,7 +81,7 @@ export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDa
       {nav}
       {showReminder && (
         <div className="banner" role="status">
-          It's after {fmtTime(RUN.logReminderTime)}: log tonight. Mark each habit ✓ or ✗ below.
+          It's after {fmtTime(reminderAt)}: log tonight. Mark each habit ✓ or ✗ below.
         </div>
       )}
       {n < 1 ? (
@@ -399,6 +400,7 @@ function logDeposit(ctx: RunCtx, date: string, amount: number) {
 }
 
 function PlannedCard({ plan, ctx }: { plan: ReturnType<typeof planFor>; ctx: RunCtx }) {
+  const sched = scheduleFor(ctx.settings.wakeTime, ctx.settings.homeTime);
   return (
     <Card title="Planned today">
       <dl className="plan">
@@ -418,8 +420,21 @@ function PlannedCard({ plan, ctx }: { plan: ReturnType<typeof planFor>; ctx: Run
           </>
         )}
         <dt>Study</dt>
-        <dd>{plan.phase2 ? "Coursework first, then push a commit" : "OSSU block 8:00–9:30 PM, then push a commit"}</dd>
+        <dd>
+          {plan.phase2 ? "Coursework first" : "OSSU block"} {sched.find((b) => b.block.startsWith("Study"))?.time}, then push a commit
+        </dd>
       </dl>
+      <details className="sched">
+        <summary>Today's schedule</summary>
+        <ol>
+          {sched.map((b) => (
+            <li key={b.block + b.time}>
+              <span className="mono">{b.time}</span>
+              <span>{b.block}</span>
+            </li>
+          ))}
+        </ol>
+      </details>
       {ctx.cfg.paydays.length === 0 && <p className="small">Add your paydays in Settings so the HYSA habit is scored.</p>}
     </Card>
   );

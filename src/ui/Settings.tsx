@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import type { PersonalProfile } from "../config/profile";
-import { RUN } from "../config/run.config";
+import { DEFAULT_HOME, DEFAULT_WAKE, RUN } from "../config/run.config";
+import { resetRun } from "./actions";
+import { ArchiveView } from "./Archive";
 import { K, type Records, type Settings as SettingsT } from "../store/records";
 import { put, replaceAll, setSyncCode, syncNow, useStore } from "../store/store";
 import { Card, fmtDate, money } from "./common";
@@ -25,14 +27,13 @@ const readFile = (f: File) => f.text();
 
 export function Settings({ ctx }: { ctx: RunCtx }) {
   const store = useStore();
-  const { settings, profile, profileImported, runs, cfg } = ctx;
+  const { settings, profile, profileImported, cfg } = ctx;
   const [codeInput, setCodeInput] = useState(store.syncCode);
   const [payday, setPayday] = useState("");
   const [msg, setMsg] = useState("");
   const profileFile = useRef<HTMLInputElement>(null);
   const backupFile = useRef<HTMLInputElement>(null);
   const saveSettings = (patch: Partial<SettingsT>) => put(K.settings, { ...settings, ...patch });
-  const run1 = runs["run-1"];
 
   const importProfile = async (f: File) => {
     try {
@@ -148,6 +149,20 @@ export function Settings({ ctx }: { ctx: RunCtx }) {
         </div>
 
         <div className="col">
+          <Card title="Schedule">
+            <div className="grid2">
+              <label className="field" style={{ marginTop: 0 }}>
+                <span>Wake time</span>
+                <input type="time" value={settings.wakeTime ?? DEFAULT_WAKE} onChange={(e) => saveSettings({ wakeTime: e.target.value || undefined })} />
+              </label>
+              <label className="field" style={{ marginTop: 0 }}>
+                <span>Home from work</span>
+                <input type="time" value={settings.homeTime ?? DEFAULT_HOME} onChange={(e) => saveSettings({ homeTime: e.target.value || undefined })} />
+              </label>
+            </div>
+            <p className="small">Morning blocks follow your wake time; gym, dinner, study and the log reminder follow your home time.</p>
+          </Card>
+
           <Card title="Display">
             <div className="seg" role="radiogroup" aria-label="Theme">
               {(["dark", "light"] as const).map((t) => (
@@ -227,17 +242,56 @@ export function Settings({ ctx }: { ctx: RunCtx }) {
             </div>
           </Card>
 
-          <Card title="Run 1 archive">
-            {run1 ? (
-              <p className="small">
-                {run1.name}: {Object.keys(run1.days).length} days logged, {run1.hysa.length} deposits, {run1.body.length} weigh-ins. Kept read-only. The viewer comes in a later phase.
-              </p>
-            ) : (
-              <p className="small">No Run 1 data on this device yet.</p>
-            )}
-          </Card>
+          <Runs ctx={ctx} />
         </div>
       </div>
     </div>
+  );
+}
+
+function Runs({ ctx }: { ctx: RunCtx }) {
+  const archived = Object.values(ctx.runs).filter((r) => r.archived);
+  const [open, setOpen] = useState<string | null>(null);
+  const [typed, setTyped] = useState("");
+  return (
+    <Card title="Runs">
+      <p className="small" style={{ marginTop: 0 }}>
+        Active: <b>{ctx.run.name}</b>. Archived runs are read-only.
+      </p>
+      {archived.length === 0 && <p className="small">No archived runs on this device yet.</p>}
+      <ul className="entries">
+        {archived.map((r) => (
+          <li key={r.id} style={{ flexWrap: "wrap" }}>
+            <span className="grow">
+              {r.name} <span className="small">· {Object.keys(r.days).length} days</span>
+            </span>
+            <button className="btn small-btn" aria-expanded={open === r.id} onClick={() => setOpen(open === r.id ? null : r.id)}>
+              {open === r.id ? "Close" : "View"}
+            </button>
+            {open === r.id && <ArchiveView run={r} />}
+          </li>
+        ))}
+      </ul>
+      <details className="danger-zone">
+        <summary>Reset this run</summary>
+        <p className="small">
+          Clears {ctx.run.name}'s logs. Everything logged so far is copied into an archived run first, so nothing is lost. Your profile, settings and OSSU map stay. The run keeps its dates, so days that have already passed show as lost until you log them again.
+        </p>
+        <label className="field">
+          <span>Type RESET to confirm</span>
+          <input type="text" autoCapitalize="characters" value={typed} onChange={(e) => setTyped(e.target.value)} />
+        </label>
+        <button
+          className="btn wide danger"
+          disabled={typed !== "RESET"}
+          onClick={() => {
+            resetRun(ctx);
+            setTyped("");
+          }}
+        >
+          Reset run
+        </button>
+      </details>
+    </Card>
   );
 }

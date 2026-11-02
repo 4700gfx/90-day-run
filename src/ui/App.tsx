@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { dateForDay, dayNumber, weekOf } from "../engine/dates";
 import { useStore } from "../store/store";
-import { Card } from "./common";
 import { Settings } from "./Settings";
 import { Body } from "./Body";
 import { Jobs } from "./Jobs";
 import { Learn } from "./Learn";
+import { Meals } from "./Meals";
 import { Money } from "./Money";
+import { Review } from "./Review";
 import { Run } from "./Run";
 import { Today } from "./Today";
 import { useRun } from "./useRun";
 import { Week } from "./Week";
 
-type Tab = "today" | "week" | "run" | "money" | "body" | "jobs" | "learn" | "review" | "settings";
-const TABS: { id: Tab; label: string; icon: string; phase?: number }[] = [
+type Tab = "today" | "week" | "run" | "money" | "body" | "jobs" | "learn" | "review" | "meals" | "settings";
+const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "today", label: "Today", icon: "●" },
   { id: "week", label: "Week", icon: "▦" },
   { id: "run", label: "Run", icon: "◫" },
@@ -21,7 +22,8 @@ const TABS: { id: Tab; label: string; icon: string; phase?: number }[] = [
   { id: "body", label: "Body", icon: "◭" },
   { id: "jobs", label: "Jobs", icon: "▤" },
   { id: "learn", label: "Learn", icon: "✎" },
-  { id: "review", label: "Review", icon: "↺", phase: 6 },
+  { id: "review", label: "Review", icon: "↺" },
+  { id: "meals", label: "Meals", icon: "◒" },
   { id: "settings", label: "Settings", icon: "⚙" },
 ];
 const PRIMARY: Tab[] = ["today", "week", "run", "money"];
@@ -88,7 +90,6 @@ export function App() {
           {TABS.map((t) => (
             <button key={t.id} className={`navbtn ${tab === t.id ? "on" : ""}`} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
               <span aria-hidden="true">{t.icon}</span> {t.label}
-              {t.phase && <small className="soon">soon</small>}
             </button>
           ))}
         </nav>
@@ -133,19 +134,9 @@ export function App() {
         {tab === "body" && <Body ctx={ctx} />}
         {tab === "jobs" && <Jobs ctx={ctx} />}
         {tab === "learn" && <Learn ctx={ctx} />}
+        {tab === "review" && <Review ctx={ctx} />}
+        {tab === "meals" && <Meals ctx={ctx} />}
         {tab === "settings" && <Settings ctx={ctx} />}
-        {current.phase && (
-          <div className="screen">
-            <header className="dayhead">
-              <h1 className="daynum">{current.label}</h1>
-            </header>
-            <Card>
-              <p>
-                Coming in Phase {current.phase} of the upgrade. Your data for it is already being kept.
-              </p>
-            </Card>
-          </div>
-        )}
       </main>
 
       <nav className="tabbar" aria-label="Sections">
@@ -168,7 +159,6 @@ export function App() {
             {TABS.filter((t) => !PRIMARY.includes(t.id)).map((t) => (
               <button key={t.id} className={`navbtn ${tab === t.id ? "on" : ""}`} onClick={() => setTab(t.id)}>
                 <span aria-hidden="true">{t.icon}</span> {t.label}
-                {t.phase && <small className="soon">soon</small>}
               </button>
             ))}
           </div>
