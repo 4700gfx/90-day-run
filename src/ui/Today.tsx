@@ -421,7 +421,18 @@ function PlannedCard({ plan, ctx }: { plan: ReturnType<typeof planFor>; ctx: Run
         )}
         <dt>Study</dt>
         <dd>
-          {plan.phase2 ? "Coursework first" : "OSSU block"} {sched.find((b) => b.block.startsWith("Study"))?.time}, then push a commit
+          {plan.study ? (
+            <>
+              {plan.study.focus === "Off" ? "OSSU day off (syllabus Friday)" : plan.study.focus}
+              <div className="small">
+                OSSU Week {plan.study.week}: {plan.study.title} · {sched.find((b) => b.block.startsWith("Study"))?.time}, then push a commit
+              </div>
+            </>
+          ) : (
+            <>
+              {plan.phase2 ? "Coursework first" : "OSSU block"} {sched.find((b) => b.block.startsWith("Study"))?.time}, then push a commit
+            </>
+          )}
         </dd>
       </dl>
       <details className="sched">

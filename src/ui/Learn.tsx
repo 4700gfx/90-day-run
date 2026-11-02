@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { OSSU_SEED, type OssuItem } from "../config/run.config";
-import { addDays, dayNumber, weekCount, weekOf } from "../engine/dates";
-import { isPhase2, ossuStatus, readingProgress } from "../engine/learn";
+import { OSSU_SEED, OSSU_WEEKS, type OssuItem } from "../config/run.config";
+import { addDays, dateForDay, dayNumber, weekCount, weekOf } from "../engine/dates";
+import { hasSyllabus, isPhase2, mergeSyllabus, ossuStatus, readingProgress, syllabusDay } from "../engine/learn";
 import { planFor } from "../engine/plan";
 import { K } from "../store/records";
 import { put } from "../store/store";
@@ -20,6 +20,7 @@ export function Learn({ ctx }: { ctx: RunCtx }) {
       </header>
       <div className="cols">
         <div className="col">
+          <SyllabusWeek ctx={ctx} />
           <Ossu ctx={ctx} />
         </div>
         <div className="col">
@@ -37,7 +38,8 @@ function Ossu({ ctx }: { ctx: RunCtx }) {
   const { run, cfg, clock, activeRunId } = ctx;
   const items = run.ossu ?? OSSU_SEED;
   const week = Math.max(1, Math.min(weekCount(cfg), weekOf(dayNumber(clock.today, cfg))));
-  const st = ossuStatus(items, week, cfg);
+  const st = ossuStatus(items, week, cfg, dayNumber(clock.today, cfg));
+  const KIND = { course: "Course", project: "Project", homework: "Homework" } as const;
   const save = (next: OssuItem[]) => put(K.ossu(activeRunId), next);
   const update = (id: string, patch: Partial<OssuItem>) => save(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
   const toggle = (i: OssuItem) => update(i.id, { done: !i.done });
@@ -45,7 +47,7 @@ function Ossu({ ctx }: { ctx: RunCtx }) {
   const p2 = items.filter((i) => isPhase2(i, cfg));
 
   const Item = ({ i }: { i: OssuItem }) => (
-    <li className={`ossu-item ${i.done ? "done" : ""}`}>
+    <li className={`ossu-item ${i.done ? "done" : ""} k-${i.kind}`}>
       <button className={`tl-check ${i.done ? "on" : ""}`} aria-pressed={i.done} aria-label={`${i.done ? "Mark not done" : "Mark done"}: ${i.title}`} onClick={() => toggle(i)}>
         {i.done ? "✓" : ""}
       </button>
@@ -53,25 +55,46 @@ function Ossu({ ctx }: { ctx: RunCtx }) {
         <span className="ossu-title">{i.title}</span>
         <span className="small">
           {" "}
-          {i.track} · {i.kind === "project" ? "Project" : "Course"}
-          {i.week ? ` · Week ${i.week}` : ""}
+          {i.track} · {KIND[i.kind]}
+          {i.dueDay ? ` · due ${fmtDate(dateForDay(i.dueDay, cfg))}` : i.week ? ` · Week ${i.week}` : ""}
+          {i.difficulty ? ` · ${i.difficulty}` : ""}
         </span>
+        {i.details && (
+          <details className="ossu-details">
+            <summary>Details</summary>
+            <ul>
+              {i.details.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          </details>
+        )}
       </span>
     </li>
   );
 
   return (
     <Card title="OSSU map" right={<span className={`tag ${st.onTrack ? "t-good" : "t-warn"}`}>{st.onTrack ? "✓ On track" : `! Behind: ${st.overdue.length}`}</span>}>
+      {run.ossu && !hasSyllabus(run.ossu) && (
+        <div className="prompt" role="alert">
+          <span>Your map was edited before the revised syllabus arrived. Load it? Anything you ticked done stays done.</span>
+          <button className="btn primary small-btn" onClick={() => save(mergeSyllabus(run.ossu!))}>
+            Load syllabus
+          </button>
+        </div>
+      )}
       <ul className="bars" style={{ marginBottom: 10 }}>
-        <li>
-          <span className="lbl">Done</span>
-          <span className="track" aria-hidden="true">
-            <span style={{ width: `${st.total ? (st.done / st.total) * 100 : 0}%` }} />
-          </span>
-          <span className="mono val">
-            {st.done}/{st.total}
-          </span>
-        </li>
+        {(["course", "homework", "project"] as const).map((k) => (
+          <li key={k}>
+            <span className="lbl">{{ course: "Courses", homework: "Homework", project: "Projects" }[k]}</span>
+            <span className="track" aria-hidden="true">
+              <span style={{ width: `${st.byKind[k].total ? (st.byKind[k].done / st.byKind[k].total) * 100 : 0}%` }} />
+            </span>
+            <span className="mono val">
+              {st.byKind[k].done}/{st.byKind[k].total}
+            </span>
+          </li>
+        ))}
       </ul>
       <h3 className="subhead">Week {week} targets</h3>
       {st.thisWeek.length ? (
@@ -104,7 +127,7 @@ function Ossu({ ctx }: { ctx: RunCtx }) {
         <summary>Phase 2: Feb–Apr ({p2.length})</summary>
         {p2.length ? <MapEditor items={items} list={p2} cfg={{ weeks: weekCount(cfg) }} save={save} update={update} /> : <p className="small">Set an item's week to "Phase 2" to park it here.</p>}
       </details>
-      <p className="small">Seeded from your OSSU tracker's course list. Mark what's done, then assign the rest to run weeks.</p>
+      <p className="small">From your revised syllabus (Sep 29), shifted to start Sun Nov 1. Edit anything in the map above.</p>
     </Card>
   );
 }
@@ -168,6 +191,7 @@ function AddItem({ onAdd }: { onAdd: (i: OssuItem) => void }) {
       <select aria-label="Kind" value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as OssuItem["kind"] })}>
         <option value="course">Course</option>
         <option value="project">Project</option>
+        <option value="homework">Homework</option>
       </select>
       <button
         className="btn primary"
@@ -180,6 +204,45 @@ function AddItem({ onAdd }: { onAdd: (i: OssuItem) => void }) {
         Add item
       </button>
     </div>
+  );
+}
+
+/** This syllabus week's day-by-day plan (Sun–Sat), today highlighted. */
+function SyllabusWeek({ ctx }: { ctx: RunCtx }) {
+  const today = syllabusDay(ctx.clock.today);
+  const [shown, setShown] = useState(today?.week ?? (ctx.clock.today < "2026-11-01" ? 1 : OSSU_WEEKS.length));
+  const w = OSSU_WEEKS[shown - 1]!;
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return (
+    <Card
+      title={`Syllabus Week ${w.week}: ${w.title}`}
+      right={
+        <span className="daynav">
+          <button className="btn icon small-btn" disabled={shown <= 1} onClick={() => setShown(shown - 1)} aria-label="Previous syllabus week">
+            ‹
+          </button>
+          <button className="btn icon small-btn" disabled={shown >= OSSU_WEEKS.length} onClick={() => setShown(shown + 1)} aria-label="Next syllabus week">
+            ›
+          </button>
+        </span>
+      }
+    >
+      <ol className="sylweek">
+        {w.days.map((d, i) => {
+          const isToday = today?.week === w.week && today.dow === i;
+          return (
+            <li key={i} className={`${isToday ? "today" : ""}${d === "Off" ? " off" : ""}`}>
+              <span className="mono">{DOW[i]}</span>
+              <span>
+                {d}
+                {isToday && <b className="good-text"> · today</b>}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="small">Tip: {w.tip}</p>
+    </Card>
   );
 }
 

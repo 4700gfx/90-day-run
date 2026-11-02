@@ -469,3 +469,14 @@ input[type="time"] { min-height: 38px; padding: 6px 10px; border-radius: 9px; bo
 .archive .ttable td, .archive .ttable th { padding: 3px 5px; }
 tr.current td { background: var(--accent-soft); }
 .revgrid .span2 { grid-column: span 2; }
+.sylweek { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.sylweek li { display: grid; grid-template-columns: 36px 1fr; gap: 8px; padding: 4px 6px; border-radius: 8px; }
+.sylweek li.today { background: var(--accent-soft); }
+.sylweek li.off { color: var(--ink2); }
+.sylweek .mono { font-size: 11px; color: var(--ink2); padding-top: 2px; }
+.ossu-details { font-size: 12px; color: var(--ink2); }
+.ossu-details summary { cursor: pointer; display: inline; }
+.ossu-details ul { margin: 4px 0 0; padding-left: 18px; }
+.ossu-item { align-items: flex-start; }
+.ossu-item .grow { display: grid; }
+.ossu-item.k-project .ossu-title { color: var(--warn); }
