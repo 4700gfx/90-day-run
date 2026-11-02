@@ -70,7 +70,7 @@ export function milestoneTimeline(cfg: RunConfig, profile: PersonalProfile, book
   const items: Milestone[] = [];
   for (const o of ossu)
     if (o.kind === "project" && o.week != null && o.week >= 1 && o.week <= Math.ceil(cfg.lengthDays / 7))
-      items.push({ id: `ossu:${o.id}`, date: dateForDay(weekRange(o.week, cfg).last, cfg), label: `${o.title} (${o.track})`, kind: "ossu", checkable: false, done: o.done });
+      items.push({ id: `ossu:${o.id}`, date: dateForDay(o.dueDay ?? weekRange(o.week, cfg).last, cfg), label: `${o.title} due`, kind: "ossu", checkable: false, done: o.done });
   profile.moneyMilestones.forEach((m, i) => items.push({ id: `money:${m.date}:${i}`, date: m.date, label: m.label, kind: "money", checkable: true }));
   for (const r of READING_PLAN) {
     const book = r.editable && book3 ? book3 : r.book;

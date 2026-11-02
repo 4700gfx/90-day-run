@@ -1,13 +1,14 @@
 // OSSU map progress, reading progress and GitHub push detection. Pure functions.
-import { BOOKS_FINISHED, READING_PLAN, type OssuItem, type RunConfig } from "../config/run.config";
-import { dateForDay, dayNumber, weekCount } from "./dates";
+import { BOOKS_FINISHED, OSSU_SEED, OSSU_SYLLABUS_START, OSSU_WEEKS, READING_PLAN, type OssuItem, type RunConfig } from "../config/run.config";
+import { dateForDay, dayNumber, diffDays, weekCount, weekday } from "./dates";
 import type { ISODate, RunInputs } from "./types";
 
 export interface OssuStatus {
   thisWeek: OssuItem[];
-  overdue: OssuItem[]; // assigned to an earlier week and not done
+  overdue: OssuItem[]; // past its due day (or an earlier week) and not done
   done: number;
   total: number;
+  byKind: Record<OssuItem["kind"], { done: number; total: number }>;
   onTrack: boolean;
   unassigned: number;
 }
@@ -15,14 +16,21 @@ export interface OssuStatus {
 /** Items are Phase 2 when marked so or assigned past the run's last week. */
 export const isPhase2 = (i: OssuItem, cfg: RunConfig) => i.phase === 2 || (i.week != null && i.week > weekCount(cfg));
 
-export function ossuStatus(items: OssuItem[], week: number, cfg: RunConfig): OssuStatus {
+export function ossuStatus(items: OssuItem[], week: number, cfg: RunConfig, todayNum?: number): OssuStatus {
   const p1 = items.filter((i) => !isPhase2(i, cfg));
-  const overdue = p1.filter((i) => i.week != null && i.week < week && !i.done);
+  const late = (i: OssuItem) => (i.dueDay != null && todayNum != null ? i.dueDay < todayNum : i.week != null && i.week < week);
+  const overdue = p1.filter((i) => !i.done && late(i));
+  const byKind = { course: { done: 0, total: 0 }, project: { done: 0, total: 0 }, homework: { done: 0, total: 0 } };
+  for (const i of p1) {
+    byKind[i.kind].total++;
+    if (i.done) byKind[i.kind].done++;
+  }
   return {
     thisWeek: p1.filter((i) => i.week === week),
     overdue,
     done: p1.filter((i) => i.done).length,
     total: p1.length,
+    byKind,
     onTrack: overdue.length === 0,
     unassigned: p1.filter((i) => i.week == null && !i.done).length,
   };
@@ -67,3 +75,28 @@ export function pushesByDate(events: { type?: string; created_at?: string; paylo
   }
   return out;
 }
+
+/** The syllabus week/day a date falls on (weeks run Sun–Sat from Sun Nov 1), if any. */
+export function syllabusDay(date: string): { week: number; title: string; focus: string; tip: string; dow: number } | undefined {
+  const d = diffDays(date, OSSU_SYLLABUS_START);
+  if (d < 0) return undefined;
+  const w = OSSU_WEEKS[Math.floor(d / 7)];
+  if (!w) return undefined;
+  const dow = weekday(date);
+  return { week: w.week, title: w.title, focus: w.days[dow]!, tip: w.tip, dow };
+}
+
+/**
+ * Bring an already-edited map up to the syllabus: syllabus items replace the old seed,
+ * anything ticked done stays done, and custom items are kept.
+ */
+export function mergeSyllabus(existing: OssuItem[]): OssuItem[] {
+  const byId = new Map(existing.map((i) => [i.id, i]));
+  const seeded = OSSU_SEED.map((s) => {
+    const e = byId.get(s.id);
+    return e ? { ...s, done: s.done || e.done } : s;
+  });
+  return [...seeded, ...existing.filter((i) => i.id.startsWith("custom:"))];
+}
+
+export const hasSyllabus = (items: OssuItem[] | undefined) => !!items?.some((i) => i.id === "proj:midterm");

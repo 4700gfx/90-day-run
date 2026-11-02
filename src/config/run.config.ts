@@ -139,71 +139,118 @@ export const READING_PLAN = [
 export const BOOKS_FINISHED = ["Psycho-Cybernetics"];
 
 /**
- * OSSU seed, taken from ossu-tracker/src/OSSUTracker.jsx (its default flags; your
- * live progress there may differ). Editable data: add/remove/reorder and assign each
- * item to a run week in Learn. `week` is unset until the final map is provided.
+ * OSSU map, from the revised syllabus (OSSU_Syllabus_Revised.pdf, updated Sep 29, 2026),
+ * shifted so syllabus Week N runs Sun–Sat starting Sun Nov 1 (Day 0): its Sunday lecture comes
+ * just before run Week N, and everything else falls inside run Week N. Editable in Learn.
  */
 export interface OssuItem {
   id: string;
-  kind: "course" | "project";
+  kind: "course" | "project" | "homework";
   track: string;
   title: string;
   done: boolean;
   week?: number;
   phase?: 1 | 2;
+  /** Run day number it's due (projects due Saturday, homework due Wednesday). */
+  dueDay?: number;
+  difficulty?: string;
+  details?: string[];
 }
-const c = (track: string, title: string, done = false): OssuItem => ({
-  id: `${track}:${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-  kind: "course",
-  track,
-  title,
-  done,
-});
-const p = (track: string, title: string): OssuItem => ({ ...c(track, title), kind: "project" });
+const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const c = (track: string, title: string, done: boolean, week?: number): OssuItem => ({ id: `${track}:${slug(title)}`, kind: "course", track, title, done, ...(week ? { week } : {}) });
+/** Wednesday of syllabus week n = Day 3 + 7(n−1); Saturday = Day 6 + 7(n−1). */
+const wed = (n: number) => 3 + 7 * (n - 1);
+const sat = (n: number) => 6 + 7 * (n - 1);
+const hw = (id: string, week: number, title: string, difficulty: string, details: string[]): OssuItem => ({ id: `hw:${id}`, kind: "homework", track: "HW", title: `HW ${id}: ${title}`, done: false, week, dueDay: wed(week), difficulty, details });
+const proj = (id: string, week: number, track: string, title: string, details: string[]): OssuItem => ({ id: `proj:${id}`, kind: "project", track, title, done: false, week, dueDay: sat(week), details });
+
+export const OSSU_SYLLABUS_START = "2026-11-01"; // syllabus Week 1 Sunday (Day 0)
 export const OSSU_SEED: OssuItem[] = [
+  // Completed (19 per the syllabus appendix + 5 finished during Run 1)
   c("JS", "TypeScript Essential Training", true),
   c("JS", "JavaScript: Async", true),
   c("JS", "JavaScript: Array", true),
   c("JS", "JavaScript: Patterns", true),
-  c("JS", "Computer Science Principles Lab: JavaScript"),
-  c("JS", "JavaScript: Closures"),
-  c("JS", "Programming Foundations: Algorithms"),
-  p("JS", "JS Fundamentals Showcase"),
+  c("JS", "Computer Science Principles Lab: JavaScript", true),
+  c("JS", "JavaScript: Closures", true),
+  c("JS", "Programming Foundations: Algorithms", true),
   c("ARCH", "Software Design: Developing Effective Requirements", true),
   c("ARCH", "Software Architecture Foundations", true),
-  c("ARCH", "Programming Foundations: Design Patterns"),
-  p("ARCH", "Architecture Decision Record"),
+  c("ARCH", "Programming Foundations: Design Patterns", true),
   c("SQL", "Quick Start Guide to SQL", true),
   c("SQL", "Learning Relational Databases", true),
-  c("SQL", "Advanced SQL"),
-  c("SQL", "SQL Essential Training"),
-  c("SQL", "Programming Foundations: Databases"),
-  p("SQL", "Student Records Database"),
-  c("REACT", "Building Production Ready Apps"),
-  c("REACT", "React: Software Architecture"),
-  c("REACT", "React: State Management"),
-  c("REACT", "Learning Next.js"),
-  c("REACT", "MERN Essential Training"),
-  c("REACT", "React Essential Training"),
-  c("REACT", "React: Working with APIs"),
-  p("REACT", "Full-Stack Portfolio App"),
+  c("SQL", "SQL Essential Training", true),
+  c("SQL", "Programming Foundations: Databases", true),
+  c("REACT", "React Essential Training", true),
+  c("REACT", "React: Working with APIs", true),
   c("WEB", "Programming Foundations: Data Structures", true),
   c("WEB", "Programming Foundations: Discrete Math", true),
   c("WEB", "Computer Science Principles: Programming", true),
-  p("WEB", "Algorithm Visualizer"),
-  c("BE", "Express Essentials"),
-  c("BE", "Building RESTful APIs with Node.js"),
-  c("BE", "Databases for Node.js"),
-  p("BE", "RESTful Blog API"),
-  c("RN", "React Native Ecosystem and Workflow"),
-  c("RN", "Create a CRM Mobile App"),
-  c("RN", "React: Building Progressive Apps"),
-  c("RN", "React Native Essential Training"),
-  p("RN", "CRM Mobile App"),
-  c("ADV", "Node.js Microservices"),
-  c("ADV", "Advanced Node.js"),
-  c("ADV", "Building a Website with Node and Express"),
-  p("ADV", "Microservices Deployment"),
+  // Week 1 · SQL Finish + React Architecture
+  c("SQL", "Advanced SQL", false, 1),
+  c("REACT", "React: State Management", true, 1),
+  c("REACT", "React: Software Architecture", true, 1),
+  hw("1-A", 1, "Advanced SQL", "Hard", ["Recursive CTE that traverses an org chart 5 levels deep", "Index a 100k-row orders table; EXPLAIN ANALYZE before/after", "Stored procedure for a batch insert with error handling"]),
+  hw("1-B", 1, "State & Architecture", "Hard", ["Global state from scratch with Context + useReducer (no Zustand/Redux)", "Compound component pattern (custom Tabs with children)", "Refactor a class component with lifecycles to hooks"]),
+  // Week 2 · Back End Engineering: Express
+  c("BE", "Express Essentials", true, 2),
+  c("BE", "Building RESTful APIs with Node.js", true, 2),
+  hw("2-A", 2, "Express API", "Medium", ["REST API with 5 endpoints for a Books resource (full CRUD)", "Input validation middleware with express-validator", "Custom async error handler that catches all thrown errors"]),
+  hw("2-B", 2, "React Hooks", "Medium", ["useFetch with loading/error/data + request caching", "useLocalStorage that syncs state automatically", "useDebounce wired to a live search input"]),
+  // Week 3 · MERN + Node Data Layer · Midterm due
+  c("BE", "MERN Essential Training", true, 3),
+  c("BE", "Databases for Node.js", false, 3),
+  c("ADV", "Building a Website with Node and Express", false, 3),
+  hw("3-A", 3, "RESTful Blog API", "Medium", ["Express + MongoDB with Mongoose models for users and posts", "JWT auth middleware protecting write routes", "/posts CRUD with pagination"]),
+  hw("3-B", 3, "MERN Integration", "Hard", ["Connect the Blog API to a React front end: login + post listing", "Mongoose validation + pre-save password hashing", "Rate limiter middleware from scratch (Map + timestamps)"]),
+  proj("midterm", 3, "MIDTERM", "Midterm: Full-Stack Dashboard", [
+    "React + TypeScript front end with 3+ data views and global state",
+    "Express + SQLite back end: 3+ normalized tables, 5+ endpoints",
+    "ADR.md documenting 2 pattern choices",
+    "README with setup, screenshots, live demo link",
+    "10+ meaningful commits; deployed publicly",
+  ]),
+  // Week 4 · Intro to React Native
+  c("RN", "React Native Essential Training", false, 4),
+  c("RN", "React Native Ecosystem and Workflow", false, 4),
+  c("RN", "Create a CRM Mobile App", false, 4),
+  hw("4-A", 4, "React Native Basics", "Easy–Medium", ["FlatList of mock contacts", "Stack + Tab navigation with React Navigation", "Persist contacts to AsyncStorage and reload on launch"]),
+  hw("4-B", 4, "Data Structures", "Medium", ["Doubly linked list: insert, delete, reverse", "Binary search tree: insert, search, in-order traversal", "Min-heap for the K Largest Elements problem"]),
+  proj("crm", 4, "RN", "CRM Mobile App", ["Contacts list, detail view, add/edit screen", "AsyncStorage persistence", "Push to GitHub"]),
+  // Week 5 · PWAs + Advanced Node
+  c("RN", "React: Building Progressive Apps", false, 5),
+  c("ADV", "Node.js Microservices", false, 5),
+  c("ADV", "Advanced Node.js", false, 5),
+  hw("5-A", 5, "PWA & Mobile Polish", "Medium", ["Manifest + service worker on the midterm app", "Offline-first caching (cache-first assets, network-first API)", "Push notification subscription boilerplate"]),
+  hw("5-B", 5, "Node Advanced", "Hard", ["Split the Blog API into auth-service and posts-service", "Express API gateway proxying both", "Circuit Breaker in the gateway"]),
+  proj("microservices", 5, "ADV", "Microservices Deployment", ["Finish the auth + posts split", "Configure the gateway", "Docker Compose for local orchestration"]),
+  // Week 6 · Production React + Next.js
+  c("REACT", "Building Production Ready Apps", false, 6),
+  c("REACT", "Learning Next.js", false, 6),
+  hw("6-A", 6, "Next.js & Production", "Hard", ["SSR on 2 pages, SSG on 1; compare with Lighthouse", "ISR for a blog listing page", "GitHub Actions CI/CD deploying to Vercel on push to main"]),
+  hw("6-B", 6, "Final Prep", "Medium", ["Jest unit tests for 3 utility functions", "Error boundaries, tested with intentional throws", "Professional top-level README for the monorepo"]),
+  // Week 7 · Final Capstone Sprint
+  proj("capstone", 7, "CAPSTONE", "Final Capstone: Production Full-Stack App", [
+    "Next.js + TypeScript with SSR/ISR, Lighthouse 90+",
+    "2+ Express microservices behind an API gateway",
+    "PostgreSQL or MongoDB with CRUD, migrations, seed scripts",
+    "JWT auth with refresh tokens, protected routes, roles",
+    "React Native companion app on the shared API",
+    "PWA manifest + service worker",
+    "GitHub Actions CI/CD to production",
+    "README with architecture diagram; 20+ conventional commits",
+  ]),
+];
+
+/** Day-by-day focus for syllabus weeks 1–7, indexed Sun..Sat. */
+export const OSSU_WEEKS: { week: number; title: string; days: string[]; tip: string }[] = [
+  { week: 1, title: "SQL Finish + React Architecture", days: ["Advanced SQL (full course): window functions, CTEs, subqueries", "Review + backlog: Array Manipulation (skip if done)", "React: State Management", "HW 1-A and HW 1-B", "React: Software Architecture", "Off", "Midterm kickoff: repo, SQLite schema (3 tables + ERD), React + TS scaffold with a global state provider"], tip: "Finishing Advanced SQL closes out the SQL track." },
+  { week: 2, title: "Back End Engineering: Express", days: ["Express Essentials (full course)", "Review + backlog: TypeScript Generics (skip if done)", "Building RESTful APIs with Node.js: routing, middleware, errors", "HW 2-A and HW 2-B", "Midterm integration: connect front end to API", "Off", "Midterm build: 5 Express endpoints over SQLite, 3 React data views, draft ADR.md"], tip: "HW 2-A's Books API is a dress rehearsal for the midterm back end." },
+  { week: 3, title: "MERN + Node Data Layer · Midterm due", days: ["MERN Essential Training: full-stack wiring", "Review + backlog: Closures & Scope (skip if done)", "Databases for Node.js: Mongoose, pooling, indexing", "HW 3-A and HW 3-B", "Building a Website with Node and Express", "Off", "MIDTERM DUE: deploy, README with screenshots + live link, 10+ commits, submit"], tip: "Midterm first, homework second. Push HW 3-B to Monday rather than ship a broken deploy." },
+  { week: 4, title: "Intro to React Native", days: ["React Native Essential Training: navigation, StyleSheet, device APIs", "Review + backlog: Design Patterns (skip if done)", "React Native Ecosystem and Workflow", "HW 4-A and HW 4-B", "Create a CRM Mobile App (course)", "Off", "CRM Mobile App: list, detail, add/edit, AsyncStorage. Push to GitHub."], tip: "Your React skills transfer almost 1:1. Focus on Flexbox layout, no DOM, stack navigation." },
+  { week: 5, title: "PWAs + Advanced Node", days: ["React: Building Progressive Apps: manifests, service workers, caching", "Review + backlog: SQL Queries (skip if done)", "Node.js Microservices: decomposition, inter-service communication", "HW 5-A and HW 5-B", "Advanced Node.js: streams, clustering, worker threads", "Off", "Microservices Deployment: auth + posts split, gateway, Docker Compose"], tip: "Toughest week technically. Understand the why of microservices before the how." },
+  { week: 6, title: "Production React + Next.js", days: ["Building Production Ready Apps: testing, performance, deployment", "Review: self-assess every track 1–10; list your 2 weakest", "Learning Next.js: SSR, SSG, ISR, App Router, API routes", "HW 6-A and HW 6-B", "Final review: revisit your weakest track", "Off", "Capstone kickoff: pick the project, ADR, architecture diagram, scaffold monorepo + schema"], tip: "Last two courses. By Tuesday night all 35 should be marked complete." },
+  { week: 7, title: "Final Capstone Sprint", days: ["Back end: auth-service (JWT + refresh, roles) and core service CRUD, migrations, seeds", "API gateway + integration tests across services", "Next.js front end: SSR/ISR pages, protected routes, strict TS", "React Native companion app on the shared API + PWA manifest/service worker", "CI/CD to production, Lighthouse 90+, README with architecture diagram", "Off", "FINAL CAPSTONE DUE: polish, verify live URL, 20+ conventional commits, submit"], tip: "No new material. Ship something complete over something ambitious and half-finished." },
 ];
 
 // ---------------------------------------------------------------- Runtime config

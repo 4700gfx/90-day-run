@@ -9,6 +9,7 @@ import {
   type RunConfig,
 } from "../config/run.config";
 import { dayNumber, weekOf, weekday, weekCount } from "./dates";
+import { syllabusDay } from "./learn";
 import type { ISODate } from "./types";
 
 export const mealCycleForWeek = (week: number): number => (((week - 1) % MEAL_CYCLES.length) + MEAL_CYCLES.length) % MEAL_CYCLES.length + 1;
@@ -22,6 +23,8 @@ export interface DayPlan {
   reading?: { book: string; chapter: string };
   holiday?: string;
   phase2: boolean;
+  /** Syllabus focus for this day (OSSU weeks 1–7). */
+  study?: { week: number; title: string; focus: string };
 }
 
 export function planFor(date: ISODate, cfg: RunConfig, book3Title?: string): DayPlan {
@@ -55,5 +58,6 @@ export function planFor(date: ISODate, cfg: RunConfig, book3Title?: string): Day
     reading,
     holiday: HOLIDAYS.find((h) => h.date === date)?.label,
     phase2: date >= PHASE2_START,
+    study: syllabusDay(date),
   };
 }
