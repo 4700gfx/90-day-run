@@ -3,6 +3,7 @@
 import { PLACEHOLDER_PROFILE, mergeProfile, type PersonalProfile } from "../config/profile";
 import { RUN, type ConfigOverrides } from "../config/run.config";
 import { migrate, type BodyEntry, type RunData, type StoreV3 } from "../data/migrate";
+import type { CollectionState, FundEntry } from "../engine/collections";
 import type { DayLog, HysaDeposit, SpendEntry } from "../engine/types";
 
 export interface Rec<T = unknown> {
@@ -37,6 +38,9 @@ export const K = {
   legacy: (r: string) => `run/${r}/legacy`,
   day0: (r: string) => `run/${r}/day0`,
   milestones: (r: string) => `run/${r}/milestones`,
+  collection: (r: string, id: string) => `run/${r}/collection/${id}`,
+  fund: (r: string, id: string) => `run/${r}/fund/${id}`,
+  weekNote: (r: string, week: number) => `run/${r}/weeknote/${week}`,
   day: (r: string, date: string) => `run/${r}/day/${date}`,
   spend: (r: string, id: string) => `run/${r}/spend/${id}`,
   hysa: (r: string, id: string) => `run/${r}/hysa/${id}`,
@@ -68,6 +72,9 @@ export interface RunView extends RunInfo {
   body: BodyEntry[];
   day0: Record<string, boolean>;
   milestones: Record<string, boolean>;
+  collections: Record<string, CollectionState>;
+  fund: FundEntry[];
+  weekNotes: Record<number, string>;
 }
 
 export interface Derived {
@@ -82,7 +89,7 @@ export function derive(records: Records): Derived {
   const meta = records[K.meta]?.v as { activeRunId?: string } | undefined;
   const runs: Record<string, RunView> = {};
   const runOf = (id: string): RunView =>
-    (runs[id] ??= { id, name: id, archived: false, startDate: RUN.startDate, lengthDays: RUN.lengthDays, days: {}, spend: [], hysa: [], body: [], day0: {}, milestones: {} });
+    (runs[id] ??= { id, name: id, archived: false, startDate: RUN.startDate, lengthDays: RUN.lengthDays, days: {}, spend: [], hysa: [], body: [], day0: {}, milestones: {}, collections: {}, fund: [], weekNotes: {} });
   for (const [k, rec] of Object.entries(records)) {
     const m = /^run\/([^/]+)\/([^/]+)(?:\/(.+))?$/.exec(k);
     if (!m) continue;
@@ -91,6 +98,11 @@ export function derive(records: Records): Derived {
     if (kind === "info") Object.assign(run, rec.v as RunInfo);
     else if (kind === "day0") run.day0 = rec.v as Record<string, boolean>;
     else if (kind === "milestones") run.milestones = rec.v as Record<string, boolean>;
+    else if (kind === "collection") {
+      const c = rec.v as CollectionState;
+      run.collections[c.id] = c;
+    } else if (kind === "fund") run.fund.push(rec.v as FundEntry);
+    else if (kind === "weeknote") run.weekNotes[Number(m[3])] = (rec.v as { text: string }).text;
     else if (kind === "day") {
       const d = rec.v as DayLog;
       run.days[d.date] = d;
@@ -102,6 +114,7 @@ export function derive(records: Records): Derived {
     const byDate = (a: { date: string }, b: { date: string }) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
     r.spend.sort(byDate);
     r.hysa.sort(byDate);
+    r.fund.sort(byDate);
     r.body.sort((a, b) => (a.weekStart < b.weekStart ? -1 : 1));
   }
   const prof = records[K.profile]?.v as Partial<PersonalProfile> | undefined;
