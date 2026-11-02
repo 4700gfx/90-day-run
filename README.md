@@ -30,6 +30,12 @@ the background; each record merges by its own timestamp, so edits on two devices
 other. The code is a passcode, not real authentication: use a long generated one.
 Settings → Backup exports/imports everything as JSON.
 
+## Install on your phone
+- **iPhone (Safari):** Share → Add to Home Screen.
+- **Android (Chrome):** menu → Install app.
+It opens full-screen, works offline (logs save on the device and sync when you're back online),
+and picks up new deploys the next time it loads with a connection.
+
 ## Data history
 Schema v3. The original Sep 27 run is migrated into a read-only "Run 1" (raw data kept), and older
 synced data under the same code is migrated on the first sync.
