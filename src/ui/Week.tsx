@@ -1,6 +1,9 @@
 import { GRACE_HABITS, type HabitId } from "../config/run.config";
 import { dateForDay, tokenBlockOf, weekCount, weekRange } from "../engine/dates";
 import { floorDayAlert, tokenSummary, weekSummary } from "../engine/evaluate";
+import { weekInsights } from "../engine/insights";
+import { K } from "../store/records";
+import { put } from "../store/store";
 import type { DayResult } from "../engine/types";
 import { Card, StatusChip, fmtDate, habitLabel, money, shortHabit } from "./common";
 import type { RunCtx } from "./useRun";
@@ -40,7 +43,7 @@ function cell(d: DayResult, h: HabitId): { sym: string; label: string; tone: str
 }
 
 export function Week({ ctx, week, setWeek, openDay }: { ctx: RunCtx; week: number; setWeek: (w: number) => void; openDay: (d: string) => void }) {
-  const { ev, cfg } = ctx;
+  const { ev, cfg, run, profile, activeRunId } = ctx;
   const total = weekCount(cfg);
   const { first, last } = weekRange(week, cfg);
   const days = ev.days.slice(first - 1, last);
@@ -49,8 +52,16 @@ export function Week({ ctx, week, setWeek, openDay }: { ctx: RunCtx; week: numbe
   const block = tokenBlockOf(week);
   const blockWeeks = block * 2 - 1 === total ? `Week ${total}` : `Weeks ${block * 2 - 1}–${Math.min(block * 2, total)}`;
   const alert = floorDayAlert(ev, week, cfg);
-  const elapsed = days.filter((d) => d.status !== "FUTURE").length;
+  const elapsed = days.filter((d) => d.status === "WON" || d.status === "LOST").length;
   const weekAllowance = cfg.dailyAllowance * days.length;
+  const own = weekInsights(ev, run, cfg, week, profile);
+  // Early in a week (e.g. Monday) there's nothing decided yet: show last week's takeaways instead.
+  const fallback = own.length === 0 && week > 1 && days.some((d) => d.date === ev.today);
+  const insights = fallback ? weekInsights(ev, run, cfg, week - 1, profile) : own;
+  const noteWeek = fallback ? week - 1 : week;
+  const note = run.weekNotes[noteWeek] ?? "";
+  const saveNote = (text: string) => put(K.weekNote(activeRunId, noteWeek), { text, updatedAt: new Date().toISOString() });
+  const ICON = { good: "✓", warn: "!", info: "•" } as const;
 
   return (
     <div className="screen">
@@ -125,6 +136,34 @@ export function Week({ ctx, week, setWeek, openDay }: { ctx: RunCtx; week: numbe
         <p className="small legend">✓ hit · ✗ miss · G grace · E extended grace · … pending · – n/a · tap a day to open it</p>
       </Card>
 
+      <Card title="Insights" right={<span className="small">{fallback ? `From Week ${week - 1}` : `Week ${week}`}</span>}>
+        {insights.length ? (
+          <ul className="insights">
+            {insights.map((x, i) => (
+              <li key={i} className={`ins-${x.tone}`}>
+                <span className="ins-icon" aria-hidden="true">
+                  {ICON[x.tone]}
+                </span>
+                <span>{x.text}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="small" style={{ marginTop: 0 }}>
+            Insights appear once this week has a finished day.
+          </p>
+        )}
+        <label className="field">
+          <span>Your notes for Week {noteWeek}</span>
+          <textarea rows={4} value={note} placeholder="What worked, what cost you, what to change next week" onChange={(e) => saveNote(e.target.value)} />
+        </label>
+        {insights.length > 0 && (
+          <button className="btn small-btn" style={{ marginTop: 8 }} onClick={() => saveNote([note.trim(), ...insights.map((x) => `- ${x.text}`)].filter(Boolean).join("\n"))}>
+            Copy insights into notes
+          </button>
+        )}
+      </Card>
+
       <div className="cols">
         <Card title="Grace this week">
           <ul className="list">
@@ -151,7 +190,7 @@ export function Week({ ctx, week, setWeek, openDay }: { ctx: RunCtx; week: numbe
               <b className="mono">
                 {ws.won}/{elapsed}
               </b>
-              <span>days won</span>
+              <span>days won (finished)</span>
             </div>
             <div>
               <b className="mono">{ws.floorDays}</b>
