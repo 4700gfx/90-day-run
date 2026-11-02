@@ -293,3 +293,39 @@ textarea { resize: vertical; }
 .bars .track { height: 8px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
 .bars .track span { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
 .bars .val { text-align: right; font-size: 12px; }
+
+/* ---------- scorecards ---------- */
+.scorecards { display: grid; gap: 10px; }
+@media (min-width: 700px) { .scorecards { grid-template-columns: repeat(3, 1fr); } }
+.scorecard.locked { border-style: dashed; }
+.scorecard h2 .small { margin-left: 4px; font-weight: 600; }
+.metrics { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.metrics li { display: grid; grid-template-columns: 1fr auto; gap: 3px 8px; font-size: 13px; }
+.m-label { font-weight: 600; }
+.m-val { font-size: 13px; text-align: right; }
+.m-val .small { margin: 0; font-size: 11px; }
+.m-bar { grid-column: 1 / -1; height: 5px; border-radius: 99px; background: var(--surface2); overflow: hidden; }
+.m-bar span { display: block; height: 100%; background: var(--accent); }
+.m-bar.miss span { background: var(--bad); }
+.scorecard.locked .m-bar span { background: var(--ink2); }
+
+/* ---------- milestone timeline ---------- */
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 51px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.timeline li { position: relative; display: grid; grid-template-columns: 44px 1fr 32px; gap: 14px; align-items: center; padding: 5px 0; }
+.timeline li::before { content: ""; position: absolute; left: 47px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink2); }
+.tl-date { font-size: 11px; color: var(--ink2); text-align: right; }
+.tl-body { display: grid; min-width: 0; padding-left: 6px; }
+.tl-label { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.tl-meta { font-size: 11px; color: var(--ink2); }
+.tl-meta b { color: var(--accent); }
+.tl-check { width: 28px; height: 28px; border-radius: 8px; border: 2px solid var(--line); background: var(--bg); color: var(--accent-ink); font-weight: 900; cursor: pointer; padding: 0; justify-self: end; }
+@media (pointer: coarse) { .tl-check { width: 36px; height: 36px; } .timeline li { grid-template-columns: 44px 1fr 36px; } }
+.tl-check.on { background: var(--accent); border-color: var(--accent); }
+.tl-check.static { border: 0; background: none; cursor: default; }
+.timeline li.done::before { background: var(--accent); border-color: var(--accent); }
+.timeline li.done .tl-label { color: var(--ink2); text-decoration: line-through; }
+.timeline li.past .tl-label { color: var(--ink2); }
+.timeline li.next::before { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.timeline li.tl-checkin .tl-label { font-weight: 800; }
+.timeline li.tl-holiday .tl-label { font-weight: 500; color: var(--ink2); }
