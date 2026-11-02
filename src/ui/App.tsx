@@ -3,6 +3,7 @@ import { dateForDay, dayNumber, weekOf } from "../engine/dates";
 import { useStore } from "../store/store";
 import { Card } from "./common";
 import { Settings } from "./Settings";
+import { Money } from "./Money";
 import { Run } from "./Run";
 import { Today } from "./Today";
 import { useRun } from "./useRun";
@@ -13,7 +14,7 @@ const TABS: { id: Tab; label: string; icon: string; phase?: number }[] = [
   { id: "today", label: "Today", icon: "●" },
   { id: "week", label: "Week", icon: "▦" },
   { id: "run", label: "Run", icon: "◫" },
-  { id: "money", label: "Money", icon: "$", phase: 4 },
+  { id: "money", label: "Money", icon: "$" },
   { id: "body", label: "Body", icon: "◭", phase: 5 },
   { id: "jobs", label: "Jobs", icon: "▤", phase: 5 },
   { id: "learn", label: "Learn", icon: "✎", phase: 5 },
@@ -34,7 +35,7 @@ export function App() {
   const [tab, setTabState] = useState<Tab>(tabFromHash);
   const [moreOpen, setMoreOpen] = useState(false);
   const lastDay = dateForDay(cfg.lengthDays, cfg);
-  const clampDate = (d: string) => (d < cfg.prepDate ? cfg.prepDate : d > clock.today ? clock.today : d > lastDay ? lastDay : d);
+  const clampDate = (d: string) => (d < cfg.prepDate ? cfg.prepDate : d > lastDay ? lastDay : d);
   const [date, setDate] = useState(() => clampDate(clock.today));
   const [week, setWeek] = useState(() => Math.min(Math.max(1, weekOf(dayNumber(clock.today, cfg))), Math.ceil(cfg.lengthDays / 7)));
 
@@ -125,6 +126,7 @@ export function App() {
             }}
           />
         )}
+        {tab === "money" && <Money ctx={ctx} />}
         {tab === "settings" && <Settings ctx={ctx} />}
         {current.phase && (
           <div className="screen">
@@ -133,7 +135,7 @@ export function App() {
             </header>
             <Card>
               <p>
-                Coming in Phase {current.phase} of the upgrade. Your data for it is already being kept{current.id === "money" ? " (spend and HYSA deposits log from Today)" : ""}.
+                Coming in Phase {current.phase} of the upgrade. Your data for it is already being kept.
               </p>
             </Card>
           </div>

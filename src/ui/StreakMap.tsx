@@ -48,7 +48,7 @@ export function StreakMap({ ctx, onOpen, compact = false, selected }: { ctx: Run
                   key={i}
                   role="gridcell"
                   className={`cell ${l.cls}${isToday ? " today" : ""}${selected === d.date ? " sel" : ""}`}
-                  disabled={d.status === "FUTURE"}
+                  disabled={d.status === "FUTURE" && !compact}
                   onClick={() => onOpen(d.date)}
                   aria-label={`Day ${d.dayNum}, ${fmtDate(d.date)}: ${l.label}${isToday ? " (today)" : ""}`}
                   title={`Day ${d.dayNum} · ${fmtDate(d.date)} · ${l.label}`}

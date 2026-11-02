@@ -12,9 +12,13 @@ import { addDays, dayNumber, weekOf, weekRange, dateForDay } from "../engine/dat
 import { weekSummary } from "../engine/evaluate";
 import { isPayday } from "../engine/money";
 import { planFor } from "../engine/plan";
-import type { DayLog, SpendEntry } from "../engine/types";
+import { SPEND } from "../config/run.config";
+import { diffDays } from "../engine/dates";
+import { capCheck } from "../engine/money";
+import type { DayLog } from "../engine/types";
 import { K } from "../store/records";
 import { put } from "../store/store";
+import { addSpend, clearDay, removeSpend } from "./actions";
 import { Card, StatusChip, emptyLog, fmtDate, graceBadge, habitLabel, money, newId } from "./common";
 import { StreakMap } from "./StreakMap";
 import type { RunCtx } from "./useRun";
@@ -24,7 +28,9 @@ export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDa
   const n = dayNumber(date, cfg);
   const isToday = date === clock.today;
   const minDate = cfg.prepDate;
-  const maxDate = clock.today < dateForDay(cfg.lengthDays, cfg) ? clock.today : dateForDay(cfg.lengthDays, cfg);
+  const lastDay = dateForDay(cfg.lengthDays, cfg);
+  const todayClamped = clock.today < minDate ? minDate : clock.today > lastDay ? lastDay : clock.today;
+  const maxDate = lastDay;
   const canPrev = date > minDate;
   const canNext = date < maxDate;
   const res = ev.byDate[date];
@@ -36,7 +42,7 @@ export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDa
       <button className="btn icon" onClick={() => setDate(addDays(date, -1))} disabled={!canPrev} aria-label="Previous day">
         ‹
       </button>
-      <button className="btn" onClick={() => setDate(maxDate)} disabled={date === maxDate}>
+      <button className="btn" onClick={() => setDate(todayClamped)} disabled={date === todayClamped}>
         Today
       </button>
       <button className="btn icon" onClick={() => setDate(addDays(date, 1))} disabled={!canNext} aria-label="Next day">
@@ -74,7 +80,13 @@ export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDa
           It's after {fmtTime(RUN.logReminderTime)}: log tonight. Mark each habit ✓ or ✗ below.
         </div>
       )}
-      {n < 1 ? <Day0 ctx={ctx} date={date} /> : <DayLogView ctx={ctx} date={date} setDate={setDate} />}
+      {n < 1 ? (
+        <Day0 ctx={ctx} date={date} />
+      ) : date > clock.today ? (
+        <FutureDay ctx={ctx} date={date} setDate={setDate} />
+      ) : (
+        <DayLogView ctx={ctx} date={date} setDate={setDate} />
+      )}
     </div>
   );
 }
@@ -297,6 +309,16 @@ function DayLogView({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate
             </label>
           )}
           {!isToday && n >= 1 && <p className="small">Editing a past day. Status updates instantly.</p>}
+          {(run.days[date] || res.spend.today > 0) && (
+            <button
+              className="btn wide ghost-danger"
+              onClick={() => {
+                if (confirm(`Clear Day ${n} (${fmtDate(date)})?\n\nThis resets its habits, applies, check-in and notes, and removes that day's spend entries. HYSA deposits are kept.`)) clearDay(ctx, date);
+              }}
+            >
+              Clear this day
+            </button>
+          )}
         </Card>
       </div>
 
@@ -398,13 +420,12 @@ function SpendCard({ ctx, date, note }: { ctx: RunCtx; date: string; note?: stri
   const add = () => {
     const a = Number(amount);
     if (!Number.isFinite(a) || a <= 0) return;
-    const id = newId();
-    const e: SpendEntry = { id, date, amount: Math.round(a * 100) / 100, category: cat, note: memo || undefined, updatedAt: new Date().toISOString() };
-    put(K.spend(activeRunId, id), e);
+    if (!addSpend(ctx, { date, amount: a, category: cat, note: memo })) return;
     setAmount("");
     setMemo("");
   };
-  const remove = (e: SpendEntry) => put(K.spend(activeRunId, e.id), { ...e, deleted: true, updatedAt: new Date().toISOString() });
+  const selCat = cats.find((c) => c.id === cat);
+  const cap = selCat?.hardCap ? capCheck(run.spend, selCat, date, 0, SPEND.hardCapWarnAt) : null;
 
   return (
     <Card title="Spend" right={<span className={`mono ${remaining < 0 ? "bad-text" : "good-text"}`}>{money(remaining)} left</span>}>
@@ -449,6 +470,12 @@ function SpendCard({ ctx, date, note }: { ctx: RunCtx; date: string; note?: stri
           </button>
         ))}
       </div>
+      {cap && selCat && (
+        <p className={`small ${cap.spent >= cap.budget ? "bad-text" : cap.spent >= cap.budget * SPEND.hardCapWarnAt ? "warn-text" : ""}`}>
+          {cap.spent >= cap.budget ? "✗ " : cap.spent >= cap.budget * SPEND.hardCapWarnAt ? "! " : ""}
+          {selCat.label}: {money(cap.spent)} of {money(cap.budget)} hard cap this month
+        </p>
+      )}
       <input type="text" className="wide" placeholder="Note (optional)" value={memo} onChange={(e) => setMemo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
       {entries.length === 0 ? (
         <button
@@ -470,7 +497,7 @@ function SpendCard({ ctx, date, note }: { ctx: RunCtx; date: string; note?: stri
                 {cats.find((c) => c.id === e.category)?.label ?? e.category}
                 {e.note && <span className="small"> · {e.note}</span>}
               </span>
-              <button className="btn small-btn" onClick={() => remove(e)} aria-label={`Remove ${money(e.amount)}`}>
+              <button className="btn small-btn" onClick={() => removeSpend(ctx, e)} aria-label={`Remove ${money(e.amount)}`}>
                 Remove
               </button>
             </li>
@@ -480,5 +507,25 @@ function SpendCard({ ctx, date, note }: { ctx: RunCtx; date: string; note?: stri
       {note && <p className="small">{note}</p>}
       {cfg.dailyAllowance !== 20 && <p className="small">Daily allowance overridden in Settings: {money(cfg.dailyAllowance)}.</p>}
     </Card>
+  );
+}
+
+function FutureDay({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate: (d: string) => void }) {
+  const plan = planFor(date, ctx.cfg, ctx.settings.book3);
+  const days = diffDays(date, ctx.clock.today);
+  return (
+    <div className="cols">
+      <div className="col">
+        <Card title="Not started yet">
+          <p className="small" style={{ marginTop: 0 }}>
+            {days === 1 ? "This is tomorrow." : `This day is ${days} days away.`} You can log it once it starts. Here's the plan.
+          </p>
+        </Card>
+        <PlannedCard plan={plan} ctx={ctx} />
+      </div>
+      <Card title="Streak map" right={<span className="small">{ctx.stats.wonDays} won · {ctx.stats.lostDays} lost</span>}>
+        <StreakMap ctx={ctx} onOpen={setDate} compact selected={date} />
+      </Card>
+    </div>
   );
 }
