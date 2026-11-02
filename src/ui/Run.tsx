@@ -1,5 +1,6 @@
 import type { HabitId } from "../config/run.config";
 import { milestoneTimeline, scorecards, type Scorecard } from "../engine/checkins";
+import { clearedBy } from "../engine/collections";
 import { diffDays } from "../engine/dates";
 import { tokenSummary } from "../engine/evaluate";
 import { K } from "../store/records";
@@ -16,7 +17,7 @@ export function Run({ ctx, openDay }: { ctx: RunCtx; openDay: (d: string) => voi
   const dayNow = Math.min(Math.max(ev.todayNum, 0), cfg.lengthDays);
   const tokens = tokenSummary(ev, cfg);
   const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
-  const cards = scorecards(ev, run, cfg, profile);
+  const cards = scorecards(ev, { ...run, collectionsClearedBy: (d) => clearedBy(run.collections, d) }, cfg, profile);
   const timeline = milestoneTimeline(cfg, profile, settings.book3);
   const nextId = timeline.find((m) => m.date >= ev.today && !run.milestones[m.id])?.id;
   const toggle = (id: string) => put(K.milestones(activeRunId), { ...run.milestones, [id]: !run.milestones[id] });
@@ -153,7 +154,6 @@ function ScorecardView({ card, today }: { card: Scorecard; today: string }) {
         })}
       </ul>
       {!card.unlocked && <p className="small">Showing progress so far. Final score locks in on {fmtDate(card.date)}.</p>}
-      {card.metrics.some((m) => m.actual == null) && <p className="small">Collections are tracked in Money (Phase 4).</p>}
     </section>
   );
 }
