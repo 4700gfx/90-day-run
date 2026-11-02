@@ -36,6 +36,7 @@ export const K = {
   info: (r: string) => `run/${r}/info`,
   legacy: (r: string) => `run/${r}/legacy`,
   day0: (r: string) => `run/${r}/day0`,
+  milestones: (r: string) => `run/${r}/milestones`,
   day: (r: string, date: string) => `run/${r}/day/${date}`,
   spend: (r: string, id: string) => `run/${r}/spend/${id}`,
   hysa: (r: string, id: string) => `run/${r}/hysa/${id}`,
@@ -66,6 +67,7 @@ export interface RunView extends RunInfo {
   hysa: HysaDeposit[];
   body: BodyEntry[];
   day0: Record<string, boolean>;
+  milestones: Record<string, boolean>;
 }
 
 export interface Derived {
@@ -80,7 +82,7 @@ export function derive(records: Records): Derived {
   const meta = records[K.meta]?.v as { activeRunId?: string } | undefined;
   const runs: Record<string, RunView> = {};
   const runOf = (id: string): RunView =>
-    (runs[id] ??= { id, name: id, archived: false, startDate: RUN.startDate, lengthDays: RUN.lengthDays, days: {}, spend: [], hysa: [], body: [], day0: {} });
+    (runs[id] ??= { id, name: id, archived: false, startDate: RUN.startDate, lengthDays: RUN.lengthDays, days: {}, spend: [], hysa: [], body: [], day0: {}, milestones: {} });
   for (const [k, rec] of Object.entries(records)) {
     const m = /^run\/([^/]+)\/([^/]+)(?:\/(.+))?$/.exec(k);
     if (!m) continue;
@@ -88,6 +90,7 @@ export function derive(records: Records): Derived {
     const run = runOf(id);
     if (kind === "info") Object.assign(run, rec.v as RunInfo);
     else if (kind === "day0") run.day0 = rec.v as Record<string, boolean>;
+    else if (kind === "milestones") run.milestones = rec.v as Record<string, boolean>;
     else if (kind === "day") {
       const d = rec.v as DayLog;
       run.days[d.date] = d;
