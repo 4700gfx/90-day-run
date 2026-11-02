@@ -1,7 +1,16 @@
 {
   "name": "90-day-run",
   "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@upstash/redis": "latest"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "vitest": "2.1.9"
   }
 }
