@@ -77,17 +77,29 @@ export const DAY0_CHECKLIST = [
 
 // ---------------------------------------------------------------- Data appendix
 
-/** Default weekday schedule. Times shift with Settings wake/home times. */
-export const SCHEDULE = [
-  { time: "5:30–6:00 AM", block: "Wake, water, journal & pray" },
-  { time: "6:00–6:20 AM", block: "Read one chapter" },
-  { time: "12:00 PM", block: "Prepped lunch; 5 quick applies on phone" },
-  { time: "2:30 / 4:30 PM", block: "Snacks" },
-  { time: "~6:40–7:30 PM", block: "Gym: lift Mon–Wed, walk/run Thu–Fri" },
-  { time: "7:30–7:55 PM", block: "Dinner + close shake (window closes 8:00)" },
-  { time: "8:00–9:30 PM", block: "Study block → push a commit" },
-  { time: "9:30–9:45 PM", block: "Log the day" },
-  { time: "10:15–10:30 PM", block: "Lights out" },
+/**
+ * Default weekday schedule. Blocks anchored to "wake" shift with the wake time, blocks
+ * anchored to "home" shift with the get-home time (both set in Settings); "fixed" never moves.
+ */
+export const DEFAULT_WAKE = "05:30";
+export const DEFAULT_HOME = "18:30";
+export interface ScheduleBlock {
+  start: string; // HH:MM at the default wake/home time
+  end?: string;
+  block: string;
+  anchor: "wake" | "home" | "fixed";
+}
+export const SCHEDULE: ScheduleBlock[] = [
+  { start: "05:30", end: "06:00", block: "Wake, water, journal & pray", anchor: "wake" },
+  { start: "06:00", end: "06:20", block: "Read one chapter", anchor: "wake" },
+  { start: "12:00", block: "Prepped lunch; 5 quick applies on phone", anchor: "fixed" },
+  { start: "14:30", block: "Snack", anchor: "fixed" },
+  { start: "16:30", block: "Snack", anchor: "fixed" },
+  { start: "18:40", end: "19:30", block: "Gym: lift Mon–Wed, walk/run Thu–Fri", anchor: "home" },
+  { start: "19:30", end: "19:55", block: "Dinner + close shake (window closes 30 min after start)", anchor: "home" },
+  { start: "20:00", end: "21:30", block: "Study block → push a commit", anchor: "home" },
+  { start: "21:30", end: "21:45", block: "Log the day", anchor: "home" },
+  { start: "22:15", end: "22:30", block: "Lights out", anchor: "wake" },
 ];
 export const PHASE2_START = "2027-01-04"; // Spring classes; study block = coursework first
 
