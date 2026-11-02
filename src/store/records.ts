@@ -4,7 +4,7 @@ import { PLACEHOLDER_PROFILE, mergeProfile, type PersonalProfile } from "../conf
 import { RUN, type ConfigOverrides } from "../config/run.config";
 import { migrate, type BodyEntry, type RunData, type StoreV3 } from "../data/migrate";
 import type { BodyPhase } from "../engine/body";
-import type { CollectionState, FundEntry } from "../engine/collections";
+import { emptyCollection, type CollectionState, type FundEntry } from "../engine/collections";
 import type { JobApp } from "../engine/jobs";
 import type { OssuItem } from "../config/run.config";
 import type { DayLog, HysaDeposit, SpendEntry } from "../engine/types";
@@ -49,6 +49,7 @@ export const K = {
   job: (r: string, id: string) => `run/${r}/job/${id}`,
   ossu: (r: string) => `run/${r}/ossu`,
   bodyPhase: (r: string) => `run/${r}/bodyphase`,
+  review: (r: string, week: number) => `run/${r}/review/${week}`,
   day: (r: string, date: string) => `run/${r}/day/${date}`,
   spend: (r: string, id: string) => `run/${r}/spend/${id}`,
   hysa: (r: string, id: string) => `run/${r}/hysa/${id}`,
@@ -86,6 +87,15 @@ export interface RunView extends RunInfo {
   jobs: JobApp[];
   ossu?: OssuItem[];
   bodyPhase: { phase: BodyPhase; since?: string };
+  reviews: Record<number, WeeklyReview>;
+}
+
+export interface WeeklyReview {
+  runWeek: number;
+  fields: Record<string, string>;
+  savedAt?: string;
+  updatedAt: string;
+  deleted?: boolean;
 }
 
 export interface Derived {
@@ -100,7 +110,7 @@ export function derive(records: Records): Derived {
   const meta = records[K.meta]?.v as { activeRunId?: string } | undefined;
   const runs: Record<string, RunView> = {};
   const runOf = (id: string): RunView =>
-    (runs[id] ??= { id, name: id, archived: false, startDate: RUN.startDate, lengthDays: RUN.lengthDays, days: {}, spend: [], hysa: [], body: [], day0: {}, milestones: {}, collections: {}, fund: [], weekNotes: {}, jobs: [], bodyPhase: { phase: "build" } });
+    (runs[id] ??= { id, name: id, archived: false, startDate: RUN.startDate, lengthDays: RUN.lengthDays, days: {}, spend: [], hysa: [], body: [], day0: {}, milestones: {}, collections: {}, fund: [], weekNotes: {}, jobs: [], bodyPhase: { phase: "build" }, reviews: {} });
   for (const [k, rec] of Object.entries(records)) {
     const m = /^run\/([^/]+)\/([^/]+)(?:\/(.+))?$/.exec(k);
     if (!m) continue;
@@ -116,7 +126,10 @@ export function derive(records: Records): Derived {
     else if (kind === "job") run.jobs.push(rec.v as JobApp);
     else if (kind === "ossu") run.ossu = rec.v as OssuItem[];
     else if (kind === "bodyphase") run.bodyPhase = rec.v as RunView["bodyPhase"];
-    else if (kind === "weeknote") run.weekNotes[Number(m[3])] = (rec.v as { text: string }).text;
+    else if (kind === "review") {
+      const rv = rec.v as WeeklyReview;
+      if (!rv.deleted) run.reviews[rv.runWeek] = rv;
+    } else if (kind === "weeknote") run.weekNotes[Number(m[3])] = (rec.v as { text: string }).text;
     else if (kind === "day") {
       const d = rec.v as DayLog;
       run.days[d.date] = d;
@@ -156,3 +169,31 @@ export function mergeRemote(local: Records, remote: Records): { merged: Records;
 }
 
 export type { RunData };
+
+/**
+ * Writes that reset a run: every record is copied into a new archived run (nothing is lost),
+ * then the active run's logs are blanked. Profile, settings and the OSSU map are kept.
+ */
+export function resetRunWrites(records: Records, run: RunInfo, today: string, now: string, suffix: string): [string, unknown][] {
+  const prefix = `run/${run.id}/`;
+  const archId = `${run.id}-reset-${today.replace(/-/g, "")}-${suffix}`;
+  const writes: [string, unknown][] = [
+    [K.info(archId), { id: archId, name: `${run.name} (reset ${today})`, archived: true, startDate: run.startDate, lengthDays: run.lengthDays } satisfies RunInfo],
+  ];
+  for (const [k, rec] of Object.entries(records)) {
+    if (!k.startsWith(prefix)) continue;
+    const rest = k.slice(prefix.length);
+    const kind = rest.split("/")[0]!;
+    if (kind === "info" || kind === "legacy") continue;
+    writes.push([`run/${archId}/${rest}`, rec.v]);
+    const v = rec.v as Record<string, unknown>;
+    if (kind === "day") writes.push([k, { date: v.date as string, habits: {}, floorDay: false, appliesCount: 0, updatedAt: now } satisfies DayLog]);
+    else if (["spend", "hysa", "fund", "job", "body", "review"].includes(kind)) writes.push([k, { ...v, deleted: true, updatedAt: now }]);
+    else if (kind === "collection") writes.push([k, { ...emptyCollection(v.id as string), updatedAt: now }]);
+    else if (kind === "milestones" || kind === "day0") writes.push([k, {}]);
+    else if (kind === "weeknote") writes.push([k, { text: "", updatedAt: now }]);
+    else if (kind === "bodyphase") writes.push([k, { phase: "build" }]);
+    // "ossu" is kept on purpose: course progress is real progress.
+  }
+  return writes;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error: plain CommonJS module shared with the Vercel function
 import serverMerge from "../../api/_lib/merge.js";
-import { K, derive, mergeRemote, recordsFromLegacy, type Records } from "./records";
+import { K, derive, mergeRemote, recordsFromLegacy, resetRunWrites, type Records } from "./records";
 
 const { mergeChanges } = serverMerge as {
   mergeChanges: (e: Records, c: Records) => { merged: Records; writes: Records; rejected: string[] };
@@ -71,5 +71,32 @@ describe("server merge", () => {
   });
   it("a tie keeps the server copy", () => {
     expect(mergeChanges({ a: { v: "s", u: 7 } }, { a: { v: "c", u: 7 } }).writes).toEqual({});
+  });
+});
+
+describe("reset run", () => {
+  it("archives a full copy and blanks the active run, keeping OSSU and Run 1", () => {
+    let recs = recordsFromLegacy(legacy, 1000);
+    recs = {
+      ...recs,
+      [K.job("run-2", "j1")]: { v: { id: "j1", date: "2026-11-02", company: "Stripe", role: "SWE", source: "LinkedIn", status: "Applied", updatedAt: "" }, u: 2 },
+      [K.ossu("run-2")]: { v: [{ id: "x", kind: "course", track: "JS", title: "X", done: true }], u: 2 },
+      [K.milestones("run-2")]: { v: { a: true }, u: 2 },
+    };
+    const before = derive(recs);
+    const writes = resetRunWrites(recs, before.runs["run-2"]!, "2026-11-20", "now", "t");
+    const after = derive({ ...recs, ...Object.fromEntries(writes.map(([k, v]) => [k, { v, u: 99 }])) });
+    const r2 = after.runs["run-2"]!;
+    expect(Object.values(r2.days).every((d) => d.habits.read === undefined && d.appliesCount === 0)).toBe(true);
+    expect(r2.spend.every((e) => e.deleted)).toBe(true);
+    expect(r2.jobs.every((j) => j.deleted)).toBe(true);
+    expect(r2.milestones).toEqual({});
+    expect(r2.ossu?.[0]?.done).toBe(true); // kept
+    const arch = after.runs["run-2-reset-20261120-t"]!;
+    expect(arch.archived).toBe(true);
+    expect(arch.days["2026-11-02"]!.habits.read).toBe(true);
+    expect(arch.jobs.map((j) => j.company)).toEqual(["Stripe"]);
+    expect(arch.milestones).toEqual({ a: true });
+    expect(Object.keys(after.runs["run-1"]!.days)).toHaveLength(2); // Run 1 untouched
   });
 });

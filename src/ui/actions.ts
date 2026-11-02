@@ -2,8 +2,8 @@
 import { SPEND } from "../config/run.config";
 import { capCheck } from "../engine/money";
 import type { SpendEntry } from "../engine/types";
-import { K } from "../store/records";
-import { put, putMany } from "../store/store";
+import { K, resetRunWrites } from "../store/records";
+import { getState, put, putMany } from "../store/store";
 import { emptyLog, money, newId } from "./common";
 import type { RunCtx } from "./useRun";
 
@@ -32,4 +32,10 @@ export function clearDay(ctx: RunCtx, date: string) {
   const writes: [string, unknown][] = [[K.day(ctx.activeRunId, date), { ...emptyLog(date), updatedAt: now }]];
   for (const e of ctx.run.spend) if (e.date === date && !e.deleted) writes.push([K.spend(ctx.activeRunId, e.id), { ...e, deleted: true, updatedAt: now }]);
   putMany(writes);
+}
+
+/** Reset the active run: archive a full copy, then blank its logs (see resetRunWrites). */
+export function resetRun(ctx: RunCtx) {
+  const now = new Date().toISOString();
+  putMany(resetRunWrites(getState().records, ctx.run, ctx.clock.today, now, Date.now().toString(36)));
 }
