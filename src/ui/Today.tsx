@@ -16,6 +16,7 @@ import type { DayLog, SpendEntry } from "../engine/types";
 import { K } from "../store/records";
 import { put } from "../store/store";
 import { Card, StatusChip, emptyLog, fmtDate, graceBadge, habitLabel, money, newId } from "./common";
+import { StreakMap } from "./StreakMap";
 import type { RunCtx } from "./useRun";
 
 export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate: (d: string) => void }) {
@@ -73,7 +74,7 @@ export function Today({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDa
           It's after {fmtTime(RUN.logReminderTime)}: log tonight. Mark each habit ✓ or ✗ below.
         </div>
       )}
-      {n < 1 ? <Day0 ctx={ctx} date={date} /> : <DayLogView ctx={ctx} date={date} />}
+      {n < 1 ? <Day0 ctx={ctx} date={date} /> : <DayLogView ctx={ctx} date={date} setDate={setDate} />}
     </div>
   );
 }
@@ -112,7 +113,7 @@ function Day0({ ctx, date }: { ctx: RunCtx; date: string }) {
   );
 }
 
-function DayLogView({ ctx, date }: { ctx: RunCtx; date: string }) {
+function DayLogView({ ctx, date, setDate }: { ctx: RunCtx; date: string; setDate: (d: string) => void }) {
   const { run, cfg, ev, activeRunId, clock, settings } = ctx;
   const res = ev.byDate[date]!;
   const log: DayLog = run.days[date] ?? emptyLog(date);
@@ -300,6 +301,9 @@ function DayLogView({ ctx, date }: { ctx: RunCtx; date: string }) {
       </div>
 
       <div className="col">
+        <Card title="Streak map" right={<span className="small">{ctx.stats.wonDays} won · {ctx.stats.lostDays} lost</span>}>
+          <StreakMap ctx={ctx} onOpen={setDate} compact selected={date} />
+        </Card>
         <PlannedCard plan={plan} ctx={ctx} />
         <SpendCard ctx={ctx} date={date} />
         <Card title="Check-in">

@@ -3,6 +3,7 @@ import { dateForDay, dayNumber, weekOf } from "../engine/dates";
 import { useStore } from "../store/store";
 import { Card } from "./common";
 import { Settings } from "./Settings";
+import { Run } from "./Run";
 import { Today } from "./Today";
 import { useRun } from "./useRun";
 import { Week } from "./Week";
@@ -11,7 +12,7 @@ type Tab = "today" | "week" | "run" | "money" | "body" | "jobs" | "learn" | "rev
 const TABS: { id: Tab; label: string; icon: string; phase?: number }[] = [
   { id: "today", label: "Today", icon: "●" },
   { id: "week", label: "Week", icon: "▦" },
-  { id: "run", label: "Run", icon: "◫", phase: 3 },
+  { id: "run", label: "Run", icon: "◫" },
   { id: "money", label: "Money", icon: "$", phase: 4 },
   { id: "body", label: "Body", icon: "◭", phase: 5 },
   { id: "jobs", label: "Jobs", icon: "▤", phase: 5 },
@@ -109,6 +110,15 @@ export function App() {
             ctx={ctx}
             week={week}
             setWeek={setWeek}
+            openDay={(d) => {
+              setDate(clampDate(d));
+              setTab("today");
+            }}
+          />
+        )}
+        {tab === "run" && (
+          <Run
+            ctx={ctx}
             openDay={(d) => {
               setDate(clampDate(d));
               setTab("today");
